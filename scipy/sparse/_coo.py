@@ -8,7 +8,7 @@ from warnings import warn
 
 import numpy as np
 
-from ._matrix import spmatrix, _array_doc_to_matrix
+from ._matrix import spmatrix
 from ._sparsetools import coo_tocsr, coo_todense, coo_matvec
 from ._base import isspmatrix, SparseEfficiencyWarning, _sparray
 from ._data import _data_matrix, _minmax_mixin
@@ -21,7 +21,7 @@ import operator
 
 class coo_array(_data_matrix, _minmax_mixin):
     """
-    A sparse matrix in COOrdinate format.
+    A sparse array in COOrdinate format.
 
     Also known as the 'ijv' or 'triplet' format.
 
@@ -30,17 +30,17 @@ class coo_array(_data_matrix, _minmax_mixin):
             with a dense matrix D
 
         coo_array(S)
-            with another sparse matrix S (equivalent to S.tocoo())
+            with another sparse array S (equivalent to S.tocoo())
 
         coo_array((M, N), [dtype])
-            to construct an empty matrix with shape (M, N)
+            to construct an empty sparse array with shape (M, N)
             dtype is optional, defaulting to dtype='d'.
 
         coo_array((data, (i, j)), [shape=(M, N)])
             to construct from three arrays:
-                1. data[:]   the entries of the matrix, in any order
-                2. i[:]      the row indices of the matrix entries
-                3. j[:]      the column indices of the matrix entries
+                1. data[:]   the entries of the sparse array, in any order
+                2. i[:]      the row indices of the sparse array entries
+                3. j[:]      the column indices of the sparse array entries
 
             Where ``A[i[k], j[k]] = data[k]``.  When shape is not
             specified, it is inferred from the index arrays
@@ -48,24 +48,24 @@ class coo_array(_data_matrix, _minmax_mixin):
     Attributes
     ----------
     dtype : dtype
-        Data type of the matrix
-    shape : 2-tuple
-        Shape of the matrix
+        Data type of the sparse array
+    shape : tuple of integers
+        Shape of the sparse array
     ndim : int
-        Number of dimensions (this is always 2)
+        Number of dimensions of the sparse array
     nnz
         Number of stored values, including explicit zeros
     data
-        COO format data array of the matrix
+        COO format data array of the sparse array
     row
-        COO format row index array of the matrix
+        COO format row indices of the sparse array
     col
-        COO format column index array of the matrix
+        COO format column indices of the sparse array
 
     Notes
     -----
 
-    Sparse matrices can be used in arithmetic operations: they support
+    Sparse arrays can be used in arithmetic operations: they support
     addition, subtraction, multiplication, division, and matrix power.
 
     Advantages of the COO format
@@ -79,8 +79,8 @@ class coo_array(_data_matrix, _minmax_mixin):
             + slicing
 
     Intended Usage
-        - COO is a fast format for constructing sparse matrices
-        - Once a matrix has been constructed, convert to CSR or
+        - COO is a fast format for constructing sparse arrays
+        - Once a COO array has been constructed, convert to CSR or
           CSC format for fast arithmetic and matrix vector operations
         - By default when converting to CSR or CSC format, duplicate (i,j)
           entries will be summed together.  This facilitates efficient
@@ -89,7 +89,7 @@ class coo_array(_data_matrix, _minmax_mixin):
     Examples
     --------
 
-    >>> # Constructing an empty matrix
+    >>> # Constructing an empty sparse array
     >>> import numpy as np
     >>> from scipy.sparse import coo_array
     >>> coo_array((3, 4), dtype=np.int8).toarray()
@@ -97,7 +97,7 @@ class coo_array(_data_matrix, _minmax_mixin):
            [0, 0, 0, 0],
            [0, 0, 0, 0]], dtype=int8)
 
-    >>> # Constructing a matrix using ijv format
+    >>> # Constructing a sparse array using ijv format
     >>> row  = np.array([0, 3, 1, 0])
     >>> col  = np.array([0, 3, 1, 2])
     >>> data = np.array([4, 5, 7, 9])
@@ -107,7 +107,7 @@ class coo_array(_data_matrix, _minmax_mixin):
            [0, 0, 0, 0],
            [0, 0, 0, 5]])
 
-    >>> # Constructing a matrix with duplicate indices
+    >>> # Constructing a sparse array with duplicate indices
     >>> row  = np.array([0, 0, 1, 3, 1, 0, 0])
     >>> col  = np.array([0, 2, 1, 3, 1, 0, 0])
     >>> data = np.array([1, 1, 1, 1, 1, 1, 1])
@@ -128,75 +128,86 @@ class coo_array(_data_matrix, _minmax_mixin):
         _data_matrix.__init__(self)
 
         if isinstance(arg1, tuple):
-            if isshape(arg1):
-                M, N = arg1
-                self._shape = check_shape((M, N))
-                idx_dtype = self._get_index_dtype(maxval=max(M, N))
+            if isshape(arg1, allow_ndim=self._is_array):
+                self._shape = check_shape(arg1, allow_ndim=self._is_array)
+                idx_dtype = self._get_index_dtype(maxval=max(self._shape))
                 data_dtype = getdtype(dtype, default=float)
-                self.row = np.array([], dtype=idx_dtype)
-                self.col = np.array([], dtype=idx_dtype)
+                self._indices = tuple(np.array([], dtype=idx_dtype)
+                                      for _ in range(len(self._shape)))
                 self.data = np.array([], dtype=data_dtype)
                 self.has_canonical_format = True
             else:
                 try:
-                    obj, (row, col) = arg1
+                    obj, indices = arg1
                 except (TypeError, ValueError) as e:
                     raise TypeError('invalid input format') from e
 
                 if shape is None:
-                    if len(row) == 0 or len(col) == 0:
+                    if any(len(idx) == 0 for idx in indices):
                         raise ValueError('cannot infer dimensions from zero '
                                          'sized index arrays')
-                    M = operator.index(np.max(row)) + 1
-                    N = operator.index(np.max(col)) + 1
-                    self._shape = check_shape((M, N))
-                else:
-                    # Use 2 steps to ensure shape has length 2.
-                    M, N = shape
-                    self._shape = check_shape((M, N))
+                    shape = tuple(operator.index(np.max(idx)) + 1
+                                  for idx in indices)
+                self._shape = check_shape(shape, allow_ndim=self._is_array)
 
-                idx_dtype = self._get_index_dtype((row, col), maxval=max(self.shape), check_contents=True)
-                self.row = np.array(row, copy=copy, dtype=idx_dtype)
-                self.col = np.array(col, copy=copy, dtype=idx_dtype)
+                idx_dtype = self._get_index_dtype(indices,
+                                                  maxval=max(self.shape),
+                                                  check_contents=True)
+                self._indices = tuple(np.array(idx, copy=copy, dtype=idx_dtype)
+                                      for idx in indices)
                 self.data = getdata(obj, copy=copy, dtype=dtype)
                 self.has_canonical_format = False
         else:
             if isspmatrix(arg1):
                 if isspmatrix_coo(arg1) and copy:
-                    self.row = arg1.row.copy()
-                    self.col = arg1.col.copy()
+                    self._indices = (idx.copy() for idx in arg1._indices)
                     self.data = arg1.data.copy()
-                    self._shape = check_shape(arg1.shape)
+                    self._shape = check_shape(arg1.shape,
+                                              allow_ndim=self._is_array)
+                    self.has_canonical_format = arg1.has_canonical_format
                 else:
                     coo = arg1.tocoo()
-                    self.row = coo.row
-                    self.col = coo.col
+                    self._indices = tuple(coo._indices)
                     self.data = coo.data
-                    self._shape = check_shape(coo.shape)
-                self.has_canonical_format = False
+                    self._shape = check_shape(coo.shape,
+                                              allow_ndim=self._is_array)
+                    self.has_canonical_format = False
             else:
-                #dense argument
-                M = np.atleast_2d(np.asarray(arg1))
+                # dense argument
+                M = np.asarray(arg1)
+                if not self._is_array:
+                    M = np.atleast_2d(M)
+                    if M.ndim != 2:
+                        raise TypeError('expected dimension <= 2 array or matrix')
 
-                if M.ndim != 2:
-                    raise TypeError('expected dimension <= 2 array or matrix')
-
-                self._shape = check_shape(M.shape)
+                self._shape = check_shape(M.shape, allow_ndim=self._is_array)
                 if shape is not None:
-                    if check_shape(shape) != self._shape:
+                    if check_shape(shape, allow_ndim=self._is_array) != self._shape:
                         raise ValueError('inconsistent shapes: %s != %s' %
                                          (shape, self._shape))
                 index_dtype = self._get_index_dtype(maxval=max(self._shape))
-                row, col = M.nonzero()
-                self.row = row.astype(index_dtype, copy=False)
-                self.col = col.astype(index_dtype, copy=False)
-                self.data = M[self.row, self.col]
+                indices = M.nonzero()
+                self._indices = tuple(idx.astype(index_dtype, copy=False)
+                                      for idx in indices)
+                self.data = M[indices]
                 self.has_canonical_format = True
 
         if dtype is not None:
             self.data = self.data.astype(dtype, copy=False)
 
         self._check()
+
+    @property
+    def row(self):
+        return (
+            self._indices[0]
+            if self.ndim > 0
+            else np.array([], dtype=self._get_index_dtype())
+        )
+
+    @property
+    def col(self):
+        return self._indices[1] if self.ndim > 1 else np.zeros_like(self.row)
 
     def reshape(self, *args, **kwargs):
         shape = check_shape(args, self.shape)
@@ -267,29 +278,27 @@ class coo_array(_data_matrix, _minmax_mixin):
 
     def _check(self):
         """ Checks data structure for consistency """
+        if self.ndim != len(self._indices):
+            raise ValueError('mismatching number of index arrays for shape; '
+                             f'got {len(self._indices)}, expected {self.ndim}')
 
         # index arrays should have integer data types
-        if self.row.dtype.kind != 'i':
-            warn("row index array has non-integer dtype (%s)  "
-                    % self.row.dtype.name)
-        if self.col.dtype.kind != 'i':
-            warn("col index array has non-integer dtype (%s) "
-                    % self.col.dtype.name)
+        for i, idx in self._indices:
+            if idx.dtype.kind != 'i':
+                warn(f'index array {i} has non-integer dtype ({idx.dtype.name}) ')
 
-        idx_dtype = self._get_index_dtype((self.row, self.col), maxval=max(self.shape))
-        self.row = np.asarray(self.row, dtype=idx_dtype)
-        self.col = np.asarray(self.col, dtype=idx_dtype)
+        idx_dtype = self._get_index_dtype(self._indices, maxval=max(self.shape))
+        self._indices = tuple(np.asarray(idx, dtype=idx_dtype)
+                              for idx in self._indices)
         self.data = to_native(self.data)
 
         if self.nnz > 0:
-            if self.row.max() >= self.shape[0]:
-                raise ValueError('row index exceeds matrix dimensions')
-            if self.col.max() >= self.shape[1]:
-                raise ValueError('column index exceeds matrix dimensions')
-            if self.row.min() < 0:
-                raise ValueError('negative row index found')
-            if self.col.min() < 0:
-                raise ValueError('negative column index found')
+            for i, idx in self._indices:
+                if idx.max() >= self.shape[i]:
+                    raise ValueError(f'axis {i} index {idx.max()} exceeds '
+                                     f'matrix dimension {self.shape[i]}')
+                if idx.min() < 0:
+                    raise ValueError(f'negative axis {i} index: {idx.min()}')
 
     def transpose(self, axes=None, copy=False):
         if axes is not None:
@@ -320,15 +329,19 @@ class coo_array(_data_matrix, _minmax_mixin):
     resize.__doc__ = _sparray.resize.__doc__
 
     def toarray(self, order=None, out=None):
-        """See the docstring for `_sparray.toarray`."""
         B = self._process_toarray_args(order, out)
         fortran = int(B.flags.f_contiguous)
         if not fortran and not B.flags.c_contiguous:
             raise ValueError("Output array must be C or F contiguous")
-        M,N = self.shape
+        if self.ndim > 2:
+            raise ValueError("Cannot densify higher-rank sparse array")
+        M, N, *_ = self.shape + (1, 1)
         coo_todense(M, N, self.nnz, self.row, self.col, self.data,
                     B.ravel('A'), fortran)
-        return B
+        # Note: reshape() doesn't copy here, but does return a new array (view).
+        return B.reshape(self.shape)
+
+    toarray.__doc__ = _sparray.toarray.__doc__
 
     def tocsc(self, copy=False):
         """Convert this matrix to Compressed Sparse Column format
@@ -610,14 +623,113 @@ def isspmatrix_coo(x):
     >>> isspmatrix_coo(coo_array([[5]]))
     True
 
-    >>> from scipy.sparse import coo_array, csr_matrix, isspmatrix_coo
+    >>> from scipy.sparse import csr_matrix, isspmatrix_coo
     >>> isspmatrix_coo(csr_matrix([[5]]))
     False
     """
-    return isinstance(x, coo_matrix) or isinstance(x, coo_array)
+    return isinstance(x, coo_array)
 
 
 class coo_matrix(spmatrix, coo_array):
-    pass
+    """
+    A sparse matrix in COOrdinate format.
 
-coo_matrix.__doc__ = _array_doc_to_matrix(coo_array.__doc__)
+    Also known as the 'ijv' or 'triplet' format.
+
+    This can be instantiated in several ways:
+        coo_matrix(D)
+            with a dense matrix D
+
+        coo_matrix(S)
+            with another sparse matrix S (equivalent to S.tocoo())
+
+        coo_matrix((M, N), [dtype])
+            to construct an empty matrix with shape (M, N)
+            dtype is optional, defaulting to dtype='d'.
+
+        coo_matrix((data, (i, j)), [shape=(M, N)])
+            to construct from three arrays:
+                1. data[:]   the entries of the matrix, in any order
+                2. i[:]      the row indices of the matrix entries
+                3. j[:]      the column indices of the matrix entries
+
+            Where ``A[i[k], j[k]] = data[k]``.  When shape is not
+            specified, it is inferred from the index arrays
+
+    Attributes
+    ----------
+    dtype : dtype
+        Data type of the matrix
+    shape : 2-tuple
+        Shape of the matrix
+    ndim : int
+        Number of dimensions (this is always 2)
+    nnz
+        Number of stored values, including explicit zeros
+    data
+        COO format data array of the matrix
+    row
+        COO format row index array of the matrix
+    col
+        COO format column index array of the matrix
+
+    Notes
+    -----
+
+    Sparse matrices can be used in arithmetic operations: they support
+    addition, subtraction, multiplication, division, and matrix power.
+
+    Advantages of the COO format
+        - facilitates fast conversion among sparse formats
+        - permits duplicate entries (see example)
+        - very fast conversion to and from CSR/CSC formats
+
+    Disadvantages of the COO format
+        - does not directly support:
+            + arithmetic operations
+            + slicing
+
+    Intended Usage
+        - COO is a fast format for constructing sparse matrices
+        - Once a matrix has been constructed, convert to CSR or
+          CSC format for fast arithmetic and matrix vector operations
+        - By default when converting to CSR or CSC format, duplicate (i,j)
+          entries will be summed together.  This facilitates efficient
+          construction of finite element matrices and the like. (see example)
+
+    Examples
+    --------
+
+    >>> # Constructing an empty matrix
+    >>> import numpy as np
+    >>> from scipy.sparse import coo_matrix
+    >>> coo_matrix((3, 4), dtype=np.int8).toarray()
+    array([[0, 0, 0, 0],
+           [0, 0, 0, 0],
+           [0, 0, 0, 0]], dtype=int8)
+
+    >>> # Constructing a matrix using ijv format
+    >>> row  = np.array([0, 3, 1, 0])
+    >>> col  = np.array([0, 3, 1, 2])
+    >>> data = np.array([4, 5, 7, 9])
+    >>> coo_matrix((data, (row, col)), shape=(4, 4)).toarray()
+    array([[4, 0, 9, 0],
+           [0, 7, 0, 0],
+           [0, 0, 0, 0],
+           [0, 0, 0, 5]])
+
+    >>> # Constructing a matrix with duplicate indices
+    >>> row  = np.array([0, 0, 1, 3, 1, 0, 0])
+    >>> col  = np.array([0, 2, 1, 3, 1, 0, 0])
+    >>> data = np.array([1, 1, 1, 1, 1, 1, 1])
+    >>> coo = coo_matrix((data, (row, col)), shape=(4, 4))
+    >>> # Duplicate indices are maintained until implicitly or explicitly summed
+    >>> np.max(coo.data)
+    1
+    >>> coo.toarray()
+    array([[3, 0, 1, 0],
+           [0, 2, 0, 0],
+           [0, 0, 0, 0],
+           [0, 0, 0, 1]])
+
+    """

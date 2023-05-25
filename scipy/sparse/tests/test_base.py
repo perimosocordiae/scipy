@@ -1196,13 +1196,13 @@ class _TestCommon:
         chk = self.datsp.todense(out=out)
         assert_array_equal(self.dat, out)
         assert_array_equal(self.dat, chk)
-        assert_(chk.base is out)
+        assert np.may_share_memory(chk, out)
         # Check with out array (matrix).
         out = asmatrix(np.zeros(self.datsp.shape, dtype=self.datsp.dtype))
         chk = self.datsp.todense(out=out)
         assert_array_equal(self.dat, out)
         assert_array_equal(self.dat, chk)
-        assert_(chk is out)
+        assert np.may_share_memory(chk, out)
         a = array([[1.,2.,3.]])
         dense_dot_dense = a @ self.dat
         check = a * self.datsp.todense()
@@ -3849,6 +3849,8 @@ class TestCSR(sparse_test_class()):
         # See gh-9619 for context.
         a = csr_matrix([0, 1, 0])
         b = csr_matrix([1, 1, 0])
+        assert a.nnz == 1
+        assert b.nnz == 2
         assert (a + b).nnz == 2
         assert a.multiply(b).nnz == 1
 
