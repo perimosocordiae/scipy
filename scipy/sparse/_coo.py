@@ -283,7 +283,7 @@ class coo_array(_data_matrix, _minmax_mixin):
                              f'got {len(self._indices)}, expected {self.ndim}')
 
         # index arrays should have integer data types
-        for i, idx in self._indices:
+        for i, idx in enumerate(self._indices):
             if idx.dtype.kind != 'i':
                 warn(f'index array {i} has non-integer dtype ({idx.dtype.name}) ')
 
@@ -293,7 +293,7 @@ class coo_array(_data_matrix, _minmax_mixin):
         self.data = to_native(self.data)
 
         if self.nnz > 0:
-            for i, idx in self._indices:
+            for i, idx in enumerate(self._indices):
                 if idx.max() >= self.shape[i]:
                     raise ValueError(f'axis {i} index {idx.max()} exceeds '
                                      f'matrix dimension {self.shape[i]}')
