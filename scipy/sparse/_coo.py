@@ -216,7 +216,7 @@ class coo_array(_data_matrix, _minmax_mixin):
         self._indices = self._indices[:1] + (new_col,) + self._indices[2:]
 
     def reshape(self, *args, **kwargs):
-        shape = check_shape(args, self.shape)
+        shape = check_shape(args, self.shape, allow_ndim=self._is_array)
         order, copy = check_reshape_kwargs(kwargs)
 
         # Return early if reshape is not required
@@ -226,23 +226,9 @@ class coo_array(_data_matrix, _minmax_mixin):
             else:
                 return self
 
-        nrows, ncols = self.shape
-
-        if order == 'C':
-            # Upcast to avoid overflows: the coo_array constructor
-            # below will downcast the results to a smaller dtype, if
-            # possible.
-            dtype = self._get_index_dtype(maxval=(ncols * max(0, nrows - 1) + max(0, ncols - 1)))
-
-            flat_indices = np.multiply(ncols, self.row, dtype=dtype) + self.col
-            new_row, new_col = divmod(flat_indices, shape[1])
-        elif order == 'F':
-            dtype = self._get_index_dtype(maxval=(nrows * max(0, ncols - 1) + max(0, nrows - 1)))
-
-            flat_indices = np.multiply(nrows, self.col, dtype=dtype) + self.row
-            new_col, new_row = divmod(flat_indices, shape[0])
-        else:
-            raise ValueError("'order' must be 'C' or 'F'")
+        # TODO: Handle overflow as in https://github.com/scipy/scipy/pull/9132
+        flat_indices = np.ravel_multi_index(self._indices, self.shape, order=order)
+        new_indices = np.unravel_index(flat_indices, shape, order=order)
 
         # Handle copy here rather than passing on to the constructor so that no
         # copy will be made of new_row and new_col regardless
@@ -251,8 +237,7 @@ class coo_array(_data_matrix, _minmax_mixin):
         else:
             new_data = self.data
 
-        return self.__class__((new_data, (new_row, new_col)),
-                              shape=shape, copy=False)
+        return self.__class__((new_data, new_indices), shape=shape, copy=False)
 
     reshape.__doc__ = _sparray.reshape.__doc__
 

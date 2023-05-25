@@ -73,3 +73,23 @@ def test_1d_tuple_constructor_with_shape():
     res = coo_array(([9,8], ([1,2],)), shape=(4,))
     assert res.shape == (4,)
     assert np.array_equal(res.toarray(), np.array([0, 9, 8, 0]))
+
+
+def test_reshape():
+    arr1d = coo_array([1, 0, 3])
+    assert arr1d.shape == (3,)
+    
+    col_vec = arr1d.reshape((3, 1))
+    assert col_vec.shape == (3, 1)
+    assert np.array_equal(col_vec.toarray(), np.array([[1], [0], [3]]))
+
+    row_vec = arr1d.reshape((1, 3))
+    assert row_vec.shape == (1, 3)
+    assert np.array_equal(row_vec.toarray(), np.array([[1, 0, 3]]))
+
+    arr2d = coo_array([[1, 2, 0], [0, 0, 3]])
+    assert arr2d.shape == (2, 3)
+
+    flat = arr2d.reshape((6,))
+    assert flat.shape == (6,)
+    assert np.array_equal(flat.toarray(), np.array([1, 2, 0, 0, 0, 3]))
