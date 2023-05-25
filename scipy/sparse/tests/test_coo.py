@@ -93,3 +93,17 @@ def test_reshape():
     flat = arr2d.reshape((6,))
     assert flat.shape == (6,)
     assert np.array_equal(flat.toarray(), np.array([1, 2, 0, 0, 0, 3]))
+
+
+def test_nnz():
+    arr1d = coo_array([1, 0, 3])
+    assert arr1d.shape == (3,)
+    assert arr1d.nnz == 2
+
+    arr2d = coo_array([[1, 2, 0], [0, 0, 3]])
+    assert arr2d.shape == (2, 3)
+    assert arr2d.nnz == 3
+
+    arr3d = coo_array([[[1, 2, 0], [0, 0, 0]]])
+    assert arr3d.shape == (1, 2, 3)
+    assert arr3d.nnz == 2

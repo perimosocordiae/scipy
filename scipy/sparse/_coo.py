@@ -244,26 +244,21 @@ class coo_array(_data_matrix, _minmax_mixin):
     def _getnnz(self, axis=None):
         if axis is None:
             nnz = len(self.data)
-            if nnz != len(self.row) or nnz != len(self.col):
-                raise ValueError('row, column, and data array must all be the '
+            if any(len(idx) != nnz for idx in self._indices):
+                raise ValueError('all index and data arrays must have the '
                                  'same length')
 
-            if self.data.ndim != 1 or self.row.ndim != 1 or \
-                    self.col.ndim != 1:
+            if self.data.ndim != 1 or any(idx.ndim != 1 for idx in self._indices):
                 raise ValueError('row, column, and data arrays must be 1-D')
 
             return int(nnz)
 
         if axis < 0:
-            axis += 2
-        if axis == 0:
-            return np.bincount(downcast_intp_index(self.col),
-                               minlength=self.shape[1])
-        elif axis == 1:
-            return np.bincount(downcast_intp_index(self.row),
-                               minlength=self.shape[0])
-        else:
+            axis += self.ndim
+        if axis >= self.ndim:
             raise ValueError('axis out of bounds')
+        return np.bincount(downcast_intp_index(self._indices[axis]),
+                           minlength=self.shape[axis])
 
     _getnnz.__doc__ = _sparray._getnnz.__doc__
 
