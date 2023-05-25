@@ -724,3 +724,29 @@ class coo_matrix(spmatrix, coo_array):
            [0, 0, 0, 1]])
 
     """
+
+    @coo_array.row.getter
+    def row(self):
+        try:
+            inds = self._indices
+        except AttributeError:
+            # Some pickled objects may still have explicit row/col attributes.
+            inds = self._indices = (self.__dict__['row'], self.__dict__['col'])
+        return inds[0]
+    
+    @row.setter
+    def row(self, new_row):
+        self._indices = (new_row, self.col)
+
+    @coo_array.col.getter
+    def col(self):
+        try:
+            inds = self._indices
+        except AttributeError:
+            # Some pickled objects may still have explicit row/col attributes.
+            inds = self._indices = (self.__dict__['row'], self.__dict__['col'])
+        return inds[1]
+    
+    @col.setter
+    def col(self, new_col):
+        self._indices = (self.row, new_col)
