@@ -160,7 +160,7 @@ class coo_array(_data_matrix, _minmax_mixin):
         else:
             if isspmatrix(arg1):
                 if isspmatrix_coo(arg1) and copy:
-                    self._indices = (idx.copy() for idx in arg1._indices)
+                    self._indices = tuple(idx.copy() for idx in arg1._indices)
                     self.data = arg1.data.copy()
                     self._shape = check_shape(arg1.shape,
                                               allow_ndim=self._is_array)
@@ -199,15 +199,21 @@ class coo_array(_data_matrix, _minmax_mixin):
 
     @property
     def row(self):
-        return (
-            self._indices[0]
-            if self.ndim > 0
-            else np.array([], dtype=self._get_index_dtype())
-        )
+        return self._indices[0]
+
+    @row.setter
+    def row(self, new_row):
+        self._indices = (new_row,) + self._indices[1:]
 
     @property
     def col(self):
         return self._indices[1] if self.ndim > 1 else np.zeros_like(self.row)
+
+    @col.setter
+    def col(self, new_col):
+        if self.ndim < 2:
+            raise ValueError('cannot set col attribute of a 1-dimensional sparse array')
+        self._indices = self._indices[:1] + (new_col,) + self._indices[2:]
 
     def reshape(self, *args, **kwargs):
         shape = check_shape(args, self.shape)

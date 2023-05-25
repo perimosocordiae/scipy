@@ -2020,6 +2020,9 @@ class _TestCommon:
                 for key, val in datsp.__dict__.items():
                     if isinstance(val, np.ndarray):
                         assert_array_equal(val, sploaded.__dict__[key])
+                    elif (isinstance(val, tuple) and val
+                          and isinstance(val[0], np.ndarray)):
+                        assert_array_equal(val, sploaded.__dict__[key])
                     else:
                         assert_(val == sploaded.__dict__[key])
         check()
