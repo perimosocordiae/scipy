@@ -242,7 +242,7 @@ class coo_array(_data_matrix, _minmax_mixin):
     reshape.__doc__ = _sparray.reshape.__doc__
 
     def _getnnz(self, axis=None):
-        if axis is None:
+        if axis is None or (axis == 0 and self.ndim == 1):
             nnz = len(self.data)
             if any(len(idx) != nnz for idx in self._indices):
                 raise ValueError('all index and data arrays must have the '
@@ -257,8 +257,11 @@ class coo_array(_data_matrix, _minmax_mixin):
             axis += self.ndim
         if axis >= self.ndim:
             raise ValueError('axis out of bounds')
-        return np.bincount(downcast_intp_index(self._indices[axis]),
-                           minlength=self.shape[axis])
+        if self.ndim > 2:
+            raise NotImplementedError('per-axis nnz for COO arrays with >2 '
+                                      'dimensions is not supported')
+        return np.bincount(downcast_intp_index(self._indices[1 - axis]),
+                           minlength=self.shape[1 - axis])
 
     _getnnz.__doc__ = _sparray._getnnz.__doc__
 
