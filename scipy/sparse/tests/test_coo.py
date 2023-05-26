@@ -107,3 +107,35 @@ def test_nnz():
     arr3d = coo_array([[[1, 2, 0], [0, 0, 0]]])
     assert arr3d.shape == (1, 2, 3)
     assert arr3d.nnz == 2
+
+
+def test_transpose():
+    arr1d = coo_array([1, 0, 3]).T
+    assert arr1d.shape == (3,)
+    assert np.array_equal(arr1d.toarray(), np.array([1, 0, 3]))
+
+    arr2d = coo_array([[1, 2, 0], [0, 0, 3]]).T
+    assert arr2d.shape == (3, 2)
+    assert np.array_equal(arr2d.toarray(), np.array([[1, 0], [2, 0], [0, 3]]))
+
+    arr3d = coo_array([[[1, 2, 0], [0, 0, 0]]]).T
+    assert arr3d.shape == (3, 2, 1)
+
+
+def test_transpose_with_axis():
+    arr1d = coo_array([1, 0, 3]).transpose(axes=(0,))
+    assert arr1d.shape == (3,)
+    assert np.array_equal(arr1d.toarray(), np.array([1, 0, 3]))
+
+    arr2d = coo_array([[1, 2, 0], [0, 0, 3]]).transpose(axes=(0, 1))
+    assert arr2d.shape == (2, 3)
+    assert np.array_equal(arr2d.toarray(), np.array([[1, 2, 0], [0, 0, 3]]))
+
+    arr3d = coo_array([[[1, 2, 0], [0, 0, 0]]]).transpose(axes=(1, 0, 2))
+    assert arr3d.shape == (2, 1, 3)
+
+    with pytest.raises(ValueError, match="axes don't match matrix dimensions"):
+        coo_array([1, 0, 3]).transpose(axes=(0, 1))
+
+    with pytest.raises(ValueError, match="repeated axis in transpose"):
+        coo_array([[1, 2, 0], [0, 0, 3]]).transpose(axes=(1, 1))

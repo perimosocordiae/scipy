@@ -290,14 +290,22 @@ class coo_array(_data_matrix, _minmax_mixin):
                     raise ValueError(f'negative axis {i} index: {idx.min()}')
 
     def transpose(self, axes=None, copy=False):
-        if axes is not None:
-            raise ValueError("Sparse matrices do not support "
-                              "an 'axes' parameter because swapping "
-                              "dimensions is the only logical permutation.")
+        if axes is None:
+            axes = range(self.ndim)[::-1]
+        elif self._is_array:
+            if len(axes) != self.ndim:
+                raise ValueError("axes don't match matrix dimensions")
+            if len(set(axes)) != self.ndim:
+                raise ValueError("repeated axis in transpose")
+        else:
+            raise ValueError("Sparse matrices do not support an 'axes' "
+                             "parameter because swapping dimensions is the "
+                             "only logical permutation.")
 
-        M, N = self.shape
-        return self.__class__((self.data, (self.col, self.row)),
-                              shape=(N, M), copy=copy)
+        permuted_shape = tuple(self._shape[i] for i in axes)
+        permuted_indices = tuple(self._indices[i] for i in axes)
+        return self.__class__((self.data, permuted_indices),
+                              shape=permuted_shape, copy=copy)
 
     transpose.__doc__ = _sparray.transpose.__doc__
 
