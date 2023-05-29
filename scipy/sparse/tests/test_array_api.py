@@ -401,3 +401,147 @@ def test_index_dtype_compressed(cls, indices_attrs, expected_dtype):
         result = cls(csr_tuple, shape=(3, 3))
         for attr in indices_attrs:
             assert getattr(result, attr).dtype == expected_dtype
+
+
+def test_default_is_matrix_diags():
+    m = scipy.sparse.diags([0, 1, 2])
+    assert not m._is_array
+
+
+def test_default_is_matrix_eye():
+    m = scipy.sparse.eye(3)
+    assert not m._is_array
+
+
+def test_default_is_matrix_spdiags():
+    m = scipy.sparse.spdiags([1, 2, 3], 0, 3, 3)
+    assert not m._is_array
+
+
+def test_default_is_matrix_identity():
+    m = scipy.sparse.identity(3)
+    assert not m._is_array
+
+
+def test_default_is_matrix_kron_dense():
+    m = scipy.sparse.kron(
+        np.array([[1, 2], [3, 4]]), np.array([[4, 3], [2, 1]])
+    )
+    assert not m._is_array
+
+
+def test_default_is_matrix_kron_sparse():
+    m = scipy.sparse.kron(
+        np.array([[1, 2], [3, 4]]), np.array([[1, 0], [0, 0]])
+    )
+    assert not m._is_array
+
+
+def test_default_is_matrix_kronsum():
+    m = scipy.sparse.kronsum(
+        np.array([[1, 0], [0, 1]]), np.array([[0, 1], [1, 0]])
+    )
+    assert not m._is_array
+
+
+def test_default_is_matrix_random():
+    m = scipy.sparse.random(3, 3)
+    assert not m._is_array
+
+
+def test_default_is_matrix_rand():
+    m = scipy.sparse.rand(3, 3)
+    assert not m._is_array
+
+
+@pytest.mark.parametrize("fn", (scipy.sparse.hstack, scipy.sparse.vstack))
+def test_default_is_matrix_stacks(fn):
+    """Same idea as `test_default_construction_fn_matrices`, but for the
+    stacking creation functions."""
+    A = scipy.sparse.coo_matrix(np.eye(2))
+    B = scipy.sparse.coo_matrix([[0, 1], [1, 0]])
+    m = fn([A, B])
+    assert not m._is_array
+
+
+def test_blocks_default_construction_fn_matrices():
+    """Same idea as `test_default_construction_fn_matrices`, but for the block
+    creation function"""
+    A = scipy.sparse.coo_matrix(np.eye(2))
+    B = scipy.sparse.coo_matrix([[2], [0]])
+    C = scipy.sparse.coo_matrix([[3]])
+
+    # block diag
+    m = scipy.sparse.block_diag((A, B, C))
+    assert not m._is_array
+
+    # bmat
+    m = scipy.sparse.bmat([[A, None], [None, C]])
+    assert not m._is_array
+
+
+def test_format_property():
+    for fmt in sparray_types:
+        arr_cls = getattr(scipy.sparse, f"{fmt}_array")
+        M = arr_cls([[1, 2]])
+        assert M.format == fmt
+        assert M._format == fmt
+        with pytest.raises(AttributeError):
+            M.format = "qqq"
+
+
+def test_issparse():
+    m = scipy.sparse.eye(3)
+    a = scipy.sparse.csr_array(m)
+    assert not m._is_array
+    assert a._is_array
+
+    # Both sparse arrays and sparse matrices should be sparse
+    assert scipy.sparse.issparse(a)
+    assert scipy.sparse.issparse(m)
+
+    # ndarray and array_likes are not sparse
+    assert not scipy.sparse.issparse(a.todense())
+    assert not scipy.sparse.issparse(m.todense())
+
+
+def test_isspmatrix():
+    m = scipy.sparse.eye(3)
+    a = scipy.sparse.csr_array(m)
+    assert not m._is_array
+    assert a._is_array
+
+    # Should only be true for sparse matrices, not sparse arrays
+    assert not scipy.sparse.isspmatrix(a)
+    assert scipy.sparse.isspmatrix(m)
+
+    # ndarray and array_likes are not sparse
+    assert not scipy.sparse.isspmatrix(a.todense())
+    assert not scipy.sparse.isspmatrix(m.todense())
+
+
+@pytest.mark.parametrize(
+    ("fmt", "fn"),
+    (
+        ("bsr", scipy.sparse.isspmatrix_bsr),
+        ("coo", scipy.sparse.isspmatrix_coo),
+        ("csc", scipy.sparse.isspmatrix_csc),
+        ("csr", scipy.sparse.isspmatrix_csr),
+        ("dia", scipy.sparse.isspmatrix_dia),
+        ("dok", scipy.sparse.isspmatrix_dok),
+        ("lil", scipy.sparse.isspmatrix_lil),
+    ),
+)
+def test_isspmatrix_format(fmt, fn):
+    m = scipy.sparse.eye(3, format=fmt)
+    a = scipy.sparse.csr_array(m).asformat(fmt)
+    assert not m._is_array
+    assert a._is_array
+
+    # Should only be true for sparse matrices, not sparse arrays
+    assert not fn(a)
+    assert fn(m)
+
+    # ndarray and array_likes are not sparse
+    assert not fn(a.todense())
+    assert not fn(m.todense())
