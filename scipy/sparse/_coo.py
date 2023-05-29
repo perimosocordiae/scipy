@@ -32,18 +32,17 @@ class _coo_base(_data_matrix, _minmax_mixin):
         coo_array(S)
             with another sparse array S (equivalent to S.tocoo())
 
-        coo_array((M, N), [dtype])
-            to construct an empty sparse array with shape (M, N)
+        coo_array(shape, [dtype])
+            to construct an empty sparse array with shape `shape`
             dtype is optional, defaulting to dtype='d'.
 
-        coo_array((data, (i, j)), [shape=(M, N)])
-            to construct from three arrays:
-                1. data[:]   the entries of the sparse array, in any order
-                2. i[:]      the row indices of the sparse array entries
-                3. j[:]      the column indices of the sparse array entries
+        coo_array((data, indices), [shape])
+            to construct from existing data and index arrays:
+                1. data[:]       the entries of the sparse array, in any order
+                2. indices[i][:] the axis-i indices of the data entries
 
-            Where ``A[i[k], j[k]] = data[k]``.  When shape is not
-            specified, it is inferred from the index arrays
+            Where ``A[indices] = data``, and indices is a tuple of index arrays.
+            When shape is not specified, it is inferred from the index arrays.
 
     Attributes
     ----------
@@ -57,10 +56,8 @@ class _coo_base(_data_matrix, _minmax_mixin):
         Number of stored values, including explicit zeros
     data
         COO format data array of the sparse array
-    row
-        COO format row indices of the sparse array
-    col
-        COO format column indices of the sparse array
+    indices
+        COO format tuple of index arrays
 
     Notes
     -----
@@ -137,8 +134,8 @@ class _coo_base(_data_matrix, _minmax_mixin):
                 self._shape = check_shape(arg1, allow_ndim=self._is_array)
                 idx_dtype = self._get_index_dtype(maxval=max(self._shape))
                 data_dtype = getdtype(dtype, default=float)
-                self._indices = tuple(np.array([], dtype=idx_dtype)
-                                      for _ in range(len(self._shape)))
+                self.indices = tuple(np.array([], dtype=idx_dtype)
+                                     for _ in range(len(self._shape)))
                 self.data = np.array([], dtype=data_dtype)
                 self.has_canonical_format = True
             else:
@@ -158,21 +155,21 @@ class _coo_base(_data_matrix, _minmax_mixin):
                 idx_dtype = self._get_index_dtype(indices,
                                                   maxval=max(self.shape),
                                                   check_contents=True)
-                self._indices = tuple(np.array(idx, copy=copy, dtype=idx_dtype)
-                                      for idx in indices)
+                self.indices = tuple(np.array(idx, copy=copy, dtype=idx_dtype)
+                                     for idx in indices)
                 self.data = getdata(obj, copy=copy, dtype=dtype)
                 self.has_canonical_format = False
         else:
             if issparse(arg1):
                 if arg1.format == self.format and copy:
-                    self._indices = tuple(idx.copy() for idx in arg1._indices)
+                    self.indices = tuple(idx.copy() for idx in arg1.indices)
                     self.data = arg1.data.copy()
                     self._shape = check_shape(arg1.shape,
                                               allow_ndim=self._is_array)
                     self.has_canonical_format = arg1.has_canonical_format
                 else:
                     coo = arg1.tocoo()
-                    self._indices = tuple(coo._indices)
+                    self.indices = tuple(coo.indices)
                     self.data = coo.data
                     self._shape = check_shape(coo.shape,
                                               allow_ndim=self._is_array)
@@ -192,8 +189,8 @@ class _coo_base(_data_matrix, _minmax_mixin):
                                          (shape, self._shape))
                 index_dtype = self._get_index_dtype(maxval=max(self._shape))
                 indices = M.nonzero()
-                self._indices = tuple(idx.astype(index_dtype, copy=False)
-                                      for idx in indices)
+                self.indices = tuple(idx.astype(index_dtype, copy=False)
+                                     for idx in indices)
                 self.data = M[indices]
                 self.has_canonical_format = True
 
@@ -204,21 +201,21 @@ class _coo_base(_data_matrix, _minmax_mixin):
 
     @property
     def row(self):
-        return self._indices[0]
+        return self.indices[0]
 
     @row.setter
     def row(self, new_row):
-        self._indices = (new_row,) + self._indices[1:]
+        self.indices = (new_row,) + self.indices[1:]
 
     @property
     def col(self):
-        return self._indices[1] if self.ndim > 1 else np.zeros_like(self.row)
+        return self.indices[1] if self.ndim > 1 else np.zeros_like(self.row)
 
     @col.setter
     def col(self, new_col):
         if self.ndim < 2:
             raise ValueError('cannot set col attribute of a 1-dimensional sparse array')
-        self._indices = self._indices[:1] + (new_col,) + self._indices[2:]
+        self.indices = self.indices[:1] + (new_col,) + self.indices[2:]
 
     def reshape(self, *args, **kwargs):
         shape = check_shape(args, self.shape, allow_ndim=self._is_array)
@@ -232,7 +229,7 @@ class _coo_base(_data_matrix, _minmax_mixin):
                 return self
 
         # TODO: Handle overflow as in https://github.com/scipy/scipy/pull/9132
-        flat_indices = np.ravel_multi_index(self._indices, self.shape, order=order)
+        flat_indices = np.ravel_multi_index(self.indices, self.shape, order=order)
         new_indices = np.unravel_index(flat_indices, shape, order=order)
 
         # Handle copy here rather than passing on to the constructor so that no
@@ -249,11 +246,11 @@ class _coo_base(_data_matrix, _minmax_mixin):
     def _getnnz(self, axis=None):
         if axis is None or (axis == 0 and self.ndim == 1):
             nnz = len(self.data)
-            if any(len(idx) != nnz for idx in self._indices):
+            if any(len(idx) != nnz for idx in self.indices):
                 raise ValueError('all index and data arrays must have the '
                                  'same length')
 
-            if self.data.ndim != 1 or any(idx.ndim != 1 for idx in self._indices):
+            if self.data.ndim != 1 or any(idx.ndim != 1 for idx in self.indices):
                 raise ValueError('row, column, and data arrays must be 1-D')
 
             return int(nnz)
@@ -265,29 +262,29 @@ class _coo_base(_data_matrix, _minmax_mixin):
         if self.ndim > 2:
             raise NotImplementedError('per-axis nnz for COO arrays with >2 '
                                       'dimensions is not supported')
-        return np.bincount(downcast_intp_index(self._indices[1 - axis]),
+        return np.bincount(downcast_intp_index(self.indices[1 - axis]),
                            minlength=self.shape[1 - axis])
 
     _getnnz.__doc__ = _spbase._getnnz.__doc__
 
     def _check(self):
         """ Checks data structure for consistency """
-        if self.ndim != len(self._indices):
+        if self.ndim != len(self.indices):
             raise ValueError('mismatching number of index arrays for shape; '
-                             f'got {len(self._indices)}, expected {self.ndim}')
+                             f'got {len(self.indices)}, expected {self.ndim}')
 
         # index arrays should have integer data types
-        for i, idx in enumerate(self._indices):
+        for i, idx in enumerate(self.indices):
             if idx.dtype.kind != 'i':
                 warn(f'index array {i} has non-integer dtype ({idx.dtype.name}) ')
 
-        idx_dtype = self._get_index_dtype(self._indices, maxval=max(self.shape))
-        self._indices = tuple(np.asarray(idx, dtype=idx_dtype)
-                              for idx in self._indices)
+        idx_dtype = self._get_index_dtype(self.indices, maxval=max(self.shape))
+        self.indices = tuple(np.asarray(idx, dtype=idx_dtype)
+                             for idx in self.indices)
         self.data = to_native(self.data)
 
         if self.nnz > 0:
-            for i, idx in enumerate(self._indices):
+            for i, idx in enumerate(self.indices):
                 if idx.max() >= self.shape[i]:
                     raise ValueError(f'axis {i} index {idx.max()} exceeds '
                                      f'matrix dimension {self.shape[i]}')
@@ -308,7 +305,7 @@ class _coo_base(_data_matrix, _minmax_mixin):
                              "only logical permutation.")
 
         permuted_shape = tuple(self._shape[i] for i in axes)
-        permuted_indices = tuple(self._indices[i] for i in axes)
+        permuted_indices = tuple(self.indices[i] for i in axes)
         return self.__class__((self.data, permuted_indices),
                               shape=permuted_shape, copy=copy)
 
@@ -344,7 +341,7 @@ class _coo_base(_data_matrix, _minmax_mixin):
         # Note: reshape() doesn't copy here, but does return a new array (view).
         return B.reshape(self.shape)
 
-    toarray.__doc__ = _sparray.toarray.__doc__
+    toarray.__doc__ = _spbase.toarray.__doc__
 
     def tocsc(self, copy=False):
         """Convert this matrix to Compressed Sparse Column format
@@ -750,25 +747,25 @@ class coo_matrix(spmatrix, _coo_base):
     @coo_array.row.getter
     def row(self):
         try:
-            inds = self._indices
+            inds = self.indices
         except AttributeError:
             # Some pickled objects may still have explicit row/col attributes.
-            inds = self._indices = (self.__dict__['row'], self.__dict__['col'])
+            inds = self.indices = (self.__dict__['row'], self.__dict__['col'])
         return inds[0]
     
     @row.setter
     def row(self, new_row):
-        self._indices = (new_row, self.col)
+        self.indices = (new_row, self.col)
 
     @coo_array.col.getter
     def col(self):
         try:
-            inds = self._indices
+            inds = self.indices
         except AttributeError:
             # Some pickled objects may still have explicit row/col attributes.
-            inds = self._indices = (self.__dict__['row'], self.__dict__['col'])
+            inds = self.indices = (self.__dict__['row'], self.__dict__['col'])
         return inds[1]
     
     @col.setter
     def col(self, new_col):
-        self._indices = (self.row, new_col)
+        self.indices = (self.row, new_col)

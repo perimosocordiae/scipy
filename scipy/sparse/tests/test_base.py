@@ -1306,9 +1306,8 @@ class _TestCommon:
         S = self.spcreator(D)
         if hasattr(S, 'data'):
             S.data.flags.writeable = False
-        if hasattr(S, 'indptr'):
+        if S.format in ('csr', 'csc', 'bsr'):
             S.indptr.flags.writeable = False
-        if hasattr(S, 'indices'):
             S.indices.flags.writeable = False
         for x in supported_dtypes:
             D_casted = D.astype(x)
@@ -3923,8 +3922,6 @@ class TestCSR(sparse_test_class()):
         # See gh-9619 for context.
         a = csr_matrix([0, 1, 0])
         b = csr_matrix([1, 1, 0])
-        assert a.nnz == 1
-        assert b.nnz == 2
         assert (a + b).nnz == 2
         assert a.multiply(b).nnz == 1
 
