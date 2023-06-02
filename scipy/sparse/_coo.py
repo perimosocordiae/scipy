@@ -311,16 +311,16 @@ class _coo_base(_data_matrix, _minmax_mixin):
 
     transpose.__doc__ = _spbase.transpose.__doc__
 
-    def resize(self, *shape):
-        shape = check_shape(shape)
-        new_M, new_N = shape
-        M, N = self.shape
-
-        if new_M < M or new_N < N:
-            mask = np.logical_and(self.row < new_M, self.col < new_N)
+    def resize(self, *shape, allow_ndim=False):
+        shape = check_shape(shape, allow_ndim=allow_ndim)
+        if any(m < new_m for m, new_m in zip(shape, self.shape)):
+            if self.ndim == 1:
+                mask = self.indices[0] < shape[0]
+            else:  # ndim == 2
+                mask = np.logical_and(*(idx < new_m
+                                        for idx, new_m in zip(self.indices, shape)))
             if not mask.all():
-                self.row = self.row[mask]
-                self.col = self.col[mask]
+                self.indices = tuple(idx[mask] for idx in self.indices)
                 self.data = self.data[mask]
 
         self._shape = shape
@@ -363,6 +363,8 @@ class _coo_base(_data_matrix, _minmax_mixin):
                [0, 0, 0, 1]])
 
         """
+        if self.ndim != 2:
+            raise ValueError("Cannot convert a 1d sparse array to csc format")
         if self.nnz == 0:
             return self._csc_container(self.shape, dtype=self.dtype)
         else:
@@ -405,6 +407,8 @@ class _coo_base(_data_matrix, _minmax_mixin):
                [0, 0, 0, 1]])
 
         """
+        if self.ndim != 2:
+            raise ValueError("Cannot convert a 1d sparse array to csr format")
         if self.nnz == 0:
             return self._csr_container(self.shape, dtype=self.dtype)
         else:
@@ -436,6 +440,8 @@ class _coo_base(_data_matrix, _minmax_mixin):
     tocoo.__doc__ = _spbase.tocoo.__doc__
 
     def todia(self, copy=False):
+        if self.ndim != 2:
+            raise ValueError("Cannot convert a 1d sparse array to dia format")
         self.sum_duplicates()
         ks = self.col - self.row  # the diagonal for each nonzero
         diags, diag_idx = np.unique(ks, return_inverse=True)
@@ -457,6 +463,8 @@ class _coo_base(_data_matrix, _minmax_mixin):
     todia.__doc__ = _spbase.todia.__doc__
 
     def todok(self, copy=False):
+        if self.ndim != 2:
+            raise ValueError("Cannot convert a 1d sparse array to dok format")
         self.sum_duplicates()
         dok = self._dok_container((self.shape), dtype=self.dtype)
         dok._update(zip(zip(self.row,self.col),self.data))
@@ -528,6 +536,13 @@ class _coo_base(_data_matrix, _minmax_mixin):
         but with different data.  By default the index arrays
         (i.e. .row and .col) are copied.
         """
+        if data.ndim == 1:
+            if copy:
+                return self.__class__((data, (self.row.copy(),)),
+                                      shape=self.shape, dtype=data.dtype)
+            else:
+                return self.__class__((data, (self.row,)),
+                                      shape=self.shape, dtype=data.dtype)
         if copy:
             return self.__class__((data, (self.row.copy(), self.col.copy())),
                                    shape=self.shape, dtype=data.dtype)
