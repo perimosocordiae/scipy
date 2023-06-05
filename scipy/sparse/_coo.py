@@ -508,9 +508,8 @@ class _coo_base(_data_matrix, _minmax_mixin):
             row = self.row[diag_mask]
             data = self.data[diag_mask]
         else:
-            row, _, data = self._sum_duplicates(self.row[diag_mask],
-                                                self.col[diag_mask],
-                                                self.data[diag_mask])
+            inds = tuple(idx[diag_mask] for idx in self.indices)
+            (row, _), data = self._sum_duplicates(inds, self.data[diag_mask])
         diag[row + min(k, 0)] = data
 
         return diag
@@ -558,42 +557,44 @@ class _coo_base(_data_matrix, _minmax_mixin):
         """Returns a matrix with the same sparsity structure as self,
         but with different data. By default the index arrays are copied.
         """
+        # TODO: remove this hack once we update the propack test pickles.
+        if not hasattr(self, 'indices'):
+            self.indices = (self.row, self.col)
         if copy:
             indices = tuple(idx.copy() for idx in self.indices)
         else:
             indices = self.indices
         return self.__class__((data, indices), shape=self.shape, dtype=data.dtype)
 
-    def sum_duplicates(self):
+    def sum_duplicates(self) -> None:
         """Eliminate duplicate matrix entries by adding them together
 
         This is an *in place* operation
         """
         if self.has_canonical_format:
             return
-        summed = self._sum_duplicates(self.row, self.col, self.data)
-        self.row, self.col, self.data = summed
+        summed = self._sum_duplicates(self.indices, self.data)
+        self.indices, self.data = summed
         self.has_canonical_format = True
 
-    def _sum_duplicates(self, row, col, data):
-        # Assumes (data, row, col) not in canonical format.
+    def _sum_duplicates(self, indices, data):
+        # Assumes indices not in canonical format.
         if len(data) == 0:
-            return row, col, data
+            return indices, data
         # Sort indices w.r.t. rows, then cols. This corresponds to C-order,
         # which we rely on for argmin/argmax to return the first index in the
         # same way that numpy does (in the case of ties).
-        order = np.lexsort((col, row))
-        row = row[order]
-        col = col[order]
+        order = np.lexsort(indices[::-1])
+        indices = tuple(idx[order] for idx in indices)
         data = data[order]
-        unique_mask = ((row[1:] != row[:-1]) |
-                       (col[1:] != col[:-1]))
+        unique_mask = np.logical_or.reduce([
+            idx[1:] != idx[:-1] for idx in indices
+        ])
         unique_mask = np.append(True, unique_mask)
-        row = row[unique_mask]
-        col = col[unique_mask]
+        indices = tuple(idx[unique_mask] for idx in indices)
         unique_inds, = np.nonzero(unique_mask)
         data = np.add.reduceat(data, unique_inds, dtype=self.dtype)
-        return row, col, data
+        return indices, data
 
     def eliminate_zeros(self):
         """Remove zero entries from the matrix
@@ -602,8 +603,7 @@ class _coo_base(_data_matrix, _minmax_mixin):
         """
         mask = self.data != 0
         self.data = self.data[mask]
-        self.row = self.row[mask]
-        self.col = self.col[mask]
+        self.indices = tuple(idx[mask] for idx in self.indices)
 
     #######################
     # Arithmetic handlers #

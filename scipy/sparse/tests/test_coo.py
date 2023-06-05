@@ -192,3 +192,24 @@ def test_2d_to_1d_resize(arg: int):
     res.resize(arg)
     assert res.shape == den.shape
     assert np.array_equal(res.toarray(), den)
+
+
+def test_sum_duplicates():
+    arr1d = coo_array(([2, 2, 2], ([1, 0, 1],)))
+    assert arr1d.nnz == 3
+    assert np.array_equal(arr1d.toarray(), np.array([2, 4]))
+    arr1d.sum_duplicates()
+    assert arr1d.nnz == 2
+    assert np.array_equal(arr1d.toarray(), np.array([2, 4]))
+
+
+def test_eliminate_zeros():
+    arr1d = coo_array(([0, 0, 1], ([1, 0, 1],)))
+    assert arr1d.nnz == 3
+    assert arr1d.count_nonzero() == 1
+    assert np.array_equal(arr1d.toarray(), np.array([0, 1]))
+    arr1d.eliminate_zeros()
+    assert arr1d.nnz == 1
+    assert arr1d.count_nonzero() == 1
+    assert np.array_equal(arr1d.toarray(), np.array([0, 1]))
+    assert np.array_equal(arr1d.row, np.array([1]))
