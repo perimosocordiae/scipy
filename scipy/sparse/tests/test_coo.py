@@ -139,3 +139,41 @@ def test_transpose_with_axis():
 
     with pytest.raises(ValueError, match="repeated axis in transpose"):
         coo_array([[1, 2, 0], [0, 0, 3]]).transpose(axes=(1, 1))
+
+
+def test_1d_row_and_col():
+    res = coo_array([1, -2, -3])
+    assert np.array_equal(res.row, np.array([0, 1, 2]))
+    assert np.array_equal(res.col, np.zeros_like(res.row))
+    res.row = [1, 2, 3]
+    assert np.array_equal(res.indices[0], np.array([1, 2, 3]))
+    with pytest.raises(ValueError, match="cannot set col attribute"):
+        res.col = [1, 2, 3]
+
+
+def test_1d_tocsc_tocsr_todia_todok():
+    res = coo_array([1, -2, -3])
+    for f in [res.tocsc, res.tocsr, res.todok, res.todia]:
+        with pytest.raises(ValueError, match='Cannot convert'):
+            f()
+
+
+def test_1d_resize():
+    res = coo_array([1, -2, -3])
+    res1 = coo_array([1, -2, -3])
+    res1.resize(2, allow_ndim=True)
+    assert np.array_equal(res.data[:2], res1.data)
+    assert np.array_equal(res.indices[0][:2], res1.indices[0])
+
+    with pytest.raises(IndexError, match='index out of range'):
+        res1.indices[1]
+
+    res2 = coo_array([1, -2, -3])
+    res2.resize(4, allow_ndim=True)
+    assert np.array_equal(res.data, res2.data[:3])
+    assert res2.shape == (4,)
+
+    with pytest.raises(ValueError, match='shape must be a 2-tuple'):
+        res.resize(2, allow_ndim=False)
+    with pytest.raises(ValueError, match='shape must be a 2-tuple'):
+        res.resize(2)
