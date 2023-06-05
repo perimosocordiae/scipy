@@ -145,8 +145,13 @@ def test_1d_row_and_col():
     res = coo_array([1, -2, -3])
     assert np.array_equal(res.row, np.array([0, 1, 2]))
     assert np.array_equal(res.col, np.zeros_like(res.row))
+    assert res.row.dtype == res.col.dtype
+
     res.row = [1, 2, 3]
-    assert np.array_equal(res.indices[0], np.array([1, 2, 3]))
+    assert len(res.indices) == 1
+    assert np.array_equal(res.row, np.array([1, 2, 3]))
+    assert res.row.dtype == res.col.dtype
+
     with pytest.raises(ValueError, match="cannot set col attribute"):
         res.col = [1, 2, 3]
 
@@ -158,22 +163,32 @@ def test_1d_tocsc_tocsr_todia_todok():
             f()
 
 
-def test_1d_resize():
-    res = coo_array([1, -2, -3])
-    res1 = coo_array([1, -2, -3])
-    res1.resize(2, allow_ndim=True)
-    assert np.array_equal(res.data[:2], res1.data)
-    assert np.array_equal(res.indices[0][:2], res1.indices[0])
+@pytest.mark.parametrize('arg', [1, 2, 4, 5, 8])
+def test_1d_resize(arg: int):
+    den = np.array([1, -2, -3])
+    res = coo_array(den)
+    den.resize(arg)
+    res.resize(arg)
+    assert res.shape == den.shape
+    assert np.array_equal(res.toarray(), den)
 
-    with pytest.raises(IndexError, match='index out of range'):
-        res1.indices[1]
 
-    res2 = coo_array([1, -2, -3])
-    res2.resize(4, allow_ndim=True)
-    assert np.array_equal(res.data, res2.data[:3])
-    assert res2.shape == (4,)
+@pytest.mark.parametrize('arg', zip([1, 2, 3, 4], [1, 2, 3, 4]))
+def test_1d_to_2d_resize(arg: tuple[int, int]):
+    den = np.array([1, 0, 3])
+    res = coo_array(den)
 
-    with pytest.raises(ValueError, match='shape must be a 2-tuple'):
-        res.resize(2, allow_ndim=False)
-    with pytest.raises(ValueError, match='shape must be a 2-tuple'):
-        res.resize(2)
+    den.resize(arg)
+    res.resize(arg)
+    assert res.shape == den.shape
+    assert np.array_equal(res.toarray(), den)
+
+
+@pytest.mark.parametrize('arg', [1, 4, 6, 8])
+def test_2d_to_1d_resize(arg: int):
+    den = np.array([[1, 0, 3], [4, 0, 0]])
+    res = coo_array(den)
+    den.resize(arg)
+    res.resize(arg)
+    assert res.shape == den.shape
+    assert np.array_equal(res.toarray(), den)

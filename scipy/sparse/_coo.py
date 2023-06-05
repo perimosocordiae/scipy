@@ -205,6 +205,7 @@ class _coo_base(_data_matrix, _minmax_mixin):
 
     @row.setter
     def row(self, new_row):
+        new_row = np.asarray(new_row, dtype=self.indices[0].dtype)
         self.indices = (new_row,) + self.indices[1:]
 
     @property
@@ -215,6 +216,7 @@ class _coo_base(_data_matrix, _minmax_mixin):
     def col(self, new_col):
         if self.ndim < 2:
             raise ValueError('cannot set col attribute of a 1-dimensional sparse array')
+        new_col = np.asarray(new_col, dtype=self.indices[1].dtype)
         self.indices = self.indices[:1] + (new_col,) + self.indices[2:]
 
     def reshape(self, *args, **kwargs):
@@ -311,14 +313,35 @@ class _coo_base(_data_matrix, _minmax_mixin):
 
     transpose.__doc__ = _spbase.transpose.__doc__
 
-    def resize(self, *shape, allow_ndim=False):
-        shape = check_shape(shape, allow_ndim=allow_ndim)
-        if any(m < new_m for m, new_m in zip(shape, self.shape)):
-            if self.ndim == 1:
-                mask = self.indices[0] < shape[0]
-            else:  # ndim == 2
-                mask = np.logical_and(*(idx < new_m
-                                        for idx, new_m in zip(self.indices, shape)))
+    def resize(self, *shape) -> None:
+        shape = check_shape(shape, allow_ndim=self._is_array)
+
+        # Check for added dimensions.
+        if len(shape) > self.ndim:
+            flat_indices = np.ravel_multi_index(self.indices, self.shape)
+            max_size = np.prod(shape)
+            self.indices = np.unravel_index(flat_indices[:max_size], shape)
+            self.data = self.data[:max_size]
+            self._shape = shape
+            return
+
+        # Check for removed dimensions.
+        if len(shape) < self.ndim:
+            tmp_shape = (
+                self._shape[:len(shape) - 1]  # Original shape without last axis
+                + (-1,)  # Last axis is used to flatten the array
+                + (1,) * (self.ndim - len(shape))  # Pad with ones
+            )
+            tmp = self.reshape(tmp_shape)
+            self.indices = tmp.indices[:len(shape)]
+            self._shape = tmp.shape[:len(shape)]
+
+        # Handle truncation of existing dimensions.
+        is_truncating = any(old > new for old, new in zip(self.shape, shape))
+        if is_truncating:
+            mask = np.logical_and.reduce([
+                idx < size for idx, size in zip(self.indices, shape)
+            ])
             if not mask.all():
                 self.indices = tuple(idx[mask] for idx in self.indices)
                 self.data = self.data[mask]
@@ -531,24 +554,15 @@ class _coo_base(_data_matrix, _minmax_mixin):
         self.has_canonical_format = False
 
     # needed by _data_matrix
-    def _with_data(self,data,copy=True):
+    def _with_data(self, data, copy=True):
         """Returns a matrix with the same sparsity structure as self,
-        but with different data.  By default the index arrays
-        (i.e. .row and .col) are copied.
+        but with different data. By default the index arrays are copied.
         """
-        if data.ndim == 1:
-            if copy:
-                return self.__class__((data, (self.row.copy(),)),
-                                      shape=self.shape, dtype=data.dtype)
-            else:
-                return self.__class__((data, (self.row,)),
-                                      shape=self.shape, dtype=data.dtype)
         if copy:
-            return self.__class__((data, (self.row.copy(), self.col.copy())),
-                                   shape=self.shape, dtype=data.dtype)
+            indices = tuple(idx.copy() for idx in self.indices)
         else:
-            return self.__class__((data, (self.row, self.col)),
-                                   shape=self.shape, dtype=data.dtype)
+            indices = self.indices
+        return self.__class__((data, indices), shape=self.shape, dtype=data.dtype)
 
     def sum_duplicates(self):
         """Eliminate duplicate matrix entries by adding them together
