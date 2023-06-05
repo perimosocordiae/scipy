@@ -557,9 +557,6 @@ class _coo_base(_data_matrix, _minmax_mixin):
         """Returns a matrix with the same sparsity structure as self,
         but with different data. By default the index arrays are copied.
         """
-        # TODO: remove this hack once we update the propack test pickles.
-        if not hasattr(self, 'indices'):
-            self.indices = (self.row, self.col)
         if copy:
             indices = tuple(idx.copy() for idx in self.indices)
         else:
@@ -773,28 +770,7 @@ class coo_matrix(spmatrix, _coo_base):
 
     """
 
-    @coo_array.row.getter
-    def row(self):
-        try:
-            inds = self.indices
-        except AttributeError:
-            # Some pickled objects may still have explicit row/col attributes.
-            inds = self.indices = (self.__dict__['row'], self.__dict__['col'])
-        return inds[0]
-    
-    @row.setter
-    def row(self, new_row):
-        self.indices = (new_row, self.col)
-
-    @coo_array.col.getter
-    def col(self):
-        try:
-            inds = self.indices
-        except AttributeError:
-            # Some pickled objects may still have explicit row/col attributes.
-            inds = self.indices = (self.__dict__['row'], self.__dict__['col'])
-        return inds[1]
-    
-    @col.setter
-    def col(self, new_col):
-        self.indices = (self.row, new_col)
+    def __setstate__(self, state):
+        if 'indices' not in state:
+            state['indices'] = (state.pop('row'), state.pop('col'))
+        self.__dict__.update(state)
