@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from scipy.sparse import coo_array
+from scipy.sparse import coo_array, issparse
 
 
 def test_shape_constructor():
@@ -213,3 +213,26 @@ def test_eliminate_zeros():
     assert arr1d.count_nonzero() == 1
     assert np.array_equal(arr1d.toarray(), np.array([0, 1]))
     assert np.array_equal(arr1d.row, np.array([1]))
+
+
+def test_1d_add_dense():
+    res = coo_array([0, -2, -3, 0]) + np.array([0, 1, 2, 3])
+    assert np.array_equal(res, [0, -1, -1, 3])
+    assert not issparse(res)
+
+
+def test_1d_mul_vector():
+    res = coo_array([0, -2, -3, 0])._mul_vector(np.array([0, 1, 2, 3]))
+    assert np.array_equal(res, [-8])
+
+
+def test_check_2d_mul_multivector():
+    A = coo_array([[0, 1, 2, 3], [3, 2, 1, 0]])
+    result = A @ A.T
+    assert np.array_equal(result.toarray(), [[14, 4],[4 , 14]])
+
+
+def test_1d_mul_multivector():
+    other = np.array([[0, 1, 2, 3], [3, 2, 1, 0]]).T
+    res = coo_array([0, -2, -3, 0])._mul_multivector(other)
+    assert np.array_equal(res, [-8, -7])
