@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from scipy.sparse import coo_array, issparse
+from scipy.sparse import coo_array
 
 
 def test_shape_constructor():
@@ -216,23 +216,35 @@ def test_eliminate_zeros():
 
 
 def test_1d_add_dense():
-    res = coo_array([0, -2, -3, 0]) + np.array([0, 1, 2, 3])
-    assert np.array_equal(res, [0, -1, -1, 3])
-    assert not issparse(res)
+    den_a = np.array([0, -2, -3, 0])
+    den_b = np.array([0, 1, 2, 3])
+    exp = den_a + den_b
+    res = coo_array(den_a) + den_b
+    assert type(res) == type(exp)
+    assert np.array_equal(res, exp)
 
 
 def test_1d_mul_vector():
-    res = coo_array([0, -2, -3, 0])._mul_vector(np.array([0, 1, 2, 3]))
-    assert np.array_equal(res, [-8])
-
-
-def test_check_2d_mul_multivector():
-    A = coo_array([[0, 1, 2, 3], [3, 2, 1, 0]])
-    result = A @ A.T
-    assert np.array_equal(result.toarray(), [[14, 4],[4 , 14]])
+    den_a = np.array([0, -2, -3, 0])
+    den_b = np.array([0, 1, 2, 3])
+    exp = den_a @ den_b
+    res = coo_array(den_a) @ den_b
+    assert type(res) == type(exp)
+    assert np.array_equal(res, exp)
 
 
 def test_1d_mul_multivector():
+    den = np.array([0, -2, -3, 0])
     other = np.array([[0, 1, 2, 3], [3, 2, 1, 0]]).T
-    res = coo_array([0, -2, -3, 0])._mul_multivector(other)
-    assert np.array_equal(res, [-8, -7])
+    exp = den @ other
+    res = coo_array(den) @ other
+    assert type(res) == type(exp)
+    assert np.array_equal(res, exp)
+
+
+def test_2d_mul_multivector():
+    den = np.array([[0, 1, 2, 3], [3, 2, 1, 0]])
+    arr2d = coo_array(den)
+    exp = den @ den.T
+    res = arr2d @ arr2d.T
+    assert np.array_equal(res.toarray(), exp)

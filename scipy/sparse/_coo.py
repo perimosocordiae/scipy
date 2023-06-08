@@ -613,43 +613,49 @@ class _coo_base(_data_matrix, _minmax_mixin):
         dtype = upcast_char(self.dtype.char, other.dtype.char)
         result = np.array(other, dtype=dtype, copy=True)
         fortran = int(result.flags.f_contiguous)
-        M, N, *_ = self.shape + (1, 1)
+        M = self.shape[0]
+        N = self.shape[1] if self.ndim > 1 else 1
         coo_todense(M, N, self.nnz, self.row, self.col, self.data,
                     result.ravel('A'), fortran)
         return self._container(result, copy=False)
 
     def _mul_vector(self, other):
-        #output array
-        shape = self.shape[0] if self.ndim > 1 else 1
-        result = np.zeros(shape, dtype=upcast_char(self.dtype.char, other.dtype.char))
+        result_shape = self.shape[0] if self.ndim > 1 else 1
+        result = np.zeros(result_shape,
+                          dtype=upcast_char(self.dtype.char, other.dtype.char))
 
         if self.ndim == 2:
             col = self.col
             row = self.row
         elif self.ndim == 1:
             col = self.indices[0]
-            row = np.zeros(self.nnz, dtype=col.dtype)
+            row = np.zeros_like(col)
         else:
-            raise NotImplemented(f"coo_matvec not implemented for ndim {self.ndim}")
+            raise NotImplementedError(
+                f"coo_matvec not implemented for ndim={self.ndim}")
 
         coo_matvec(self.nnz, row, col, self.data, other, result)
+        # Array semantics return a scalar here, not a single-element array.
+        if self._is_array and result_shape == 1:
+            return result[0]
         return result
 
     def _mul_multivector(self, other):
-        dtype=upcast_char(self.dtype.char, other.dtype.char)
+        result_dtype = upcast_char(self.dtype.char, other.dtype.char)
         if self.ndim == 2:
-            result = np.zeros((other.shape[1], self.shape[0]), dtype=dtype)
+            result_shape = (other.shape[1], self.shape[0])
             col = self.col
             row = self.row
         elif self.ndim == 1:
-            result = np.zeros(other.shape[1], dtype=dtype)
+            result_shape = (other.shape[1],)
             col = self.indices[0]
-            row = np.zeros(self.nnz, dtype=col.dtype)
+            row = np.zeros_like(col)
         else:
-            raise NotImplemented(f"coo_matvec not implemented for ndim {self.ndim}")
+            raise NotImplementedError(
+                f"coo_matvec not implemented for ndim={self.ndim}")
 
+        result = np.zeros(result_shape, dtype=result_dtype)
         for i, other_col in enumerate(other.T):
-            print(f"other_col: {other_col}. Going to result: {result}")
             coo_matvec(self.nnz, row, col, self.data, other_col, result[i:i + 1])
         return result.T.view(type=type(other))
 

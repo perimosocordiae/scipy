@@ -519,7 +519,8 @@ class _spbase:
         # This method has to be different from `__matmul__` because it is also
         # called by sparse matrix classes.
 
-        M, N = self.shape
+        N = self.shape[-1]
+        M = self.shape[-2] if self.ndim > 1 else 1
 
         if other.__class__ is np.ndarray:
             # Fast path for the most common case
