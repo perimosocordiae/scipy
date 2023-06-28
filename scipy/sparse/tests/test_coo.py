@@ -248,3 +248,9 @@ def test_2d_mul_multivector():
     exp = den @ den.T
     res = arr2d @ arr2d.T
     assert np.array_equal(res.toarray(), exp)
+
+
+def test_1d_diagonal():
+    den = np.array([0, -2, -3, 0])
+    with pytest.raises(ValueError, match='diagonal requires two dimensions'):
+        coo_array(den).diagonal()

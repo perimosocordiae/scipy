@@ -497,6 +497,8 @@ class _coo_base(_data_matrix, _minmax_mixin):
     todok.__doc__ = _spbase.todok.__doc__
 
     def diagonal(self, k=0):
+        if self.ndim != 2:
+            raise ValueError("diagonal requires two dimensions")
         rows, cols = self.shape
         if k <= -rows or k >= cols:
             return np.empty(0, dtype=self.data.dtype)
