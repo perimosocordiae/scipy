@@ -519,6 +519,8 @@ class _coo_base(_data_matrix, _minmax_mixin):
     diagonal.__doc__ = _data_matrix.diagonal.__doc__
 
     def _setdiag(self, values, k):
+        if self.ndim != 2:
+            raise ValueError("setting a diagonal requires two dimensions")
         M, N = self.shape
         if values.ndim and not len(values):
             return
@@ -549,8 +551,8 @@ class _coo_base(_data_matrix, _minmax_mixin):
             new_data[:] = values
 
         # Update the internal structure.
-        self.row = np.concatenate((self.row[keep], new_row))
-        self.col = np.concatenate((self.col[keep], new_col))
+        self.indices = (np.concatenate((self.row[keep], new_row)),
+                        np.concatenate((self.col[keep], new_col)))
         self.data = np.concatenate((self.data[keep], new_data))
         self.has_canonical_format = False
 
