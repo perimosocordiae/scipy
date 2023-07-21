@@ -66,7 +66,10 @@ class _spbase:
 
     __array_priority__ = 10.1
     _format = 'und'  # undefined
-    ndim = 2
+    
+    @property
+    def ndim(self) -> int:
+        return len(self._shape)
 
     @property
     def _bsr_container(self):
@@ -297,12 +300,14 @@ class _spbase:
     def format(self):
         return self._format
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         _, format_name = _formats[self.format]
         sparse_cls = 'array' if self._is_array else 'matrix'
-        return f"<%dx%d sparse {sparse_cls} of type '%s'\n" \
-               "\twith %d stored elements in %s format>" % \
-               (self.shape + (self.dtype.type, self.nnz, format_name))
+        shape_str = 'x'.join(str(x) for x in self.shape)
+        return (
+            f"<{shape_str} sparse {sparse_cls} of type '{self.dtype.type}'\n"
+            f"\twith {self.nnz} stored elements in {format_name} format>"
+        )
 
     def __str__(self):
         maxprint = self._getmaxprint()
@@ -514,7 +519,8 @@ class _spbase:
         # This method has to be different from `__matmul__` because it is also
         # called by sparse matrix classes.
 
-        M, N = self.shape
+        N = self.shape[-1]
+        M = self.shape[-2] if self.ndim > 1 else 1
 
         if other.__class__ is np.ndarray:
             # Fast path for the most common case

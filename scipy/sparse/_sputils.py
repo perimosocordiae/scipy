@@ -291,7 +291,7 @@ def validateaxis(axis) -> None:
         raise ValueError("axis out of range")
 
 
-def check_shape(args, current_shape=None):
+def check_shape(args, current_shape=None, allow_ndim=False) -> tuple[int, ...]:
     """Imitate numpy.matrix handling of shape arguments"""
     if len(args) == 0:
         raise TypeError("function missing 1 required positional argument: "
@@ -307,7 +307,7 @@ def check_shape(args, current_shape=None):
         new_shape = tuple(operator.index(arg) for arg in args)
 
     if current_shape is None:
-        if len(new_shape) != 2:
+        if not allow_ndim and len(new_shape) != 2:
             raise ValueError('shape must be a 2-tuple of positive integers')
         elif any(d < 0 for d in new_shape):
             raise ValueError("'shape' elements cannot be negative")
@@ -334,7 +334,7 @@ def check_shape(args, current_shape=None):
         else:
             raise ValueError('can only specify one unknown dimension')
 
-    if len(new_shape) != 2:
+    if not allow_ndim and len(new_shape) != 2:
         raise ValueError('matrix shape must be two-dimensional')
 
     return new_shape

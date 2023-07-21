@@ -77,9 +77,9 @@ class _dok_base(_spbase, IndexMixin, dict):
         _spbase.__init__(self)
 
         self.dtype = getdtype(dtype, default=float)
-        if isinstance(arg1, tuple) and isshape(arg1):  # (M,N)
-            M, N = arg1
-            self._shape = check_shape((M, N))
+        if isinstance(arg1, tuple) and isshape(arg1, allow_ndim=self._is_array):
+            # Shape-only ctor
+            self._shape = check_shape(arg1, allow_ndim=self._is_array)
         elif issparse(arg1):  # Sparse ctor
             if arg1.format == self.format and copy:
                 arg1 = arg1.copy()
@@ -90,7 +90,7 @@ class _dok_base(_spbase, IndexMixin, dict):
                 arg1 = arg1.astype(dtype, copy=False)
 
             dict.update(self, arg1)
-            self._shape = check_shape(arg1.shape)
+            self._shape = check_shape(arg1.shape, allow_ndim=self._is_array)
             self.dtype = arg1.dtype
         else:  # Dense ctor
             try:
@@ -98,12 +98,10 @@ class _dok_base(_spbase, IndexMixin, dict):
             except Exception as e:
                 raise TypeError('Invalid input format.') from e
 
-            if len(arg1.shape) != 2:
-                raise TypeError('Expected rank <=2 dense array or matrix.')
-
-            d = self._coo_container(arg1, dtype=dtype).todok()
-            dict.update(self, d)
-            self._shape = check_shape(arg1.shape)
+            d = self._coo_container(arg1, dtype=dtype, shape=shape)
+            for tup in zip(*d.indices, d.data):
+                dict.__setitem__(self, tup[:-1], tup[-1])
+            self._shape = d.shape
             self.dtype = d.dtype
 
     def update(self, val):
@@ -137,12 +135,15 @@ class _dok_base(_spbase, IndexMixin, dict):
         but otherwise equivalent functionality.
         """
         try:
-            i, j = key
-            assert isintlike(i) and isintlike(j)
+            assert len(key) == self.ndim
+            assert all(isintlike(d) for d in key)
         except (AssertionError, TypeError, ValueError) as e:
-            raise IndexError('Index must be a pair of integers.') from e
-        if (i < 0 or i >= self.shape[0] or j < 0 or j >= self.shape[1]):
-            raise IndexError('Index out of bounds.')
+            raise IndexError(f'Index must be a length-{self.ndim} '
+                             'tuple of integers.') from e
+        for dim, i in zip(key, self.shape):
+            if i < 0 or i >= dim:
+                raise IndexError(f'Index {i} out of bounds for '
+                                 f'length-{dim} axis.')
         return dict.get(self, key, default)
 
     def _get_intXint(self, row, col):
@@ -388,10 +389,9 @@ class _dok_base(_spbase, IndexMixin, dict):
 
         idx_dtype = self._get_index_dtype(maxval=max(self.shape))
         data = np.fromiter(self.values(), dtype=self.dtype, count=self.nnz)
-        row = np.fromiter((i for i, _ in self.keys()), dtype=idx_dtype, count=self.nnz)
-        col = np.fromiter((j for _, j in self.keys()), dtype=idx_dtype, count=self.nnz)
+        indices = tuple(np.array(list(self.keys()), dtype=idx_dtype).T)
         A = self._coo_container(
-            (data, (row, col)), shape=self.shape, dtype=self.dtype
+            (data, indices), shape=self.shape, dtype=self.dtype
         )
         A.has_canonical_format = True
         return A
