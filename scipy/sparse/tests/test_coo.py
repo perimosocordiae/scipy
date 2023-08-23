@@ -244,9 +244,11 @@ def test_1d_add_dense():
 def test_1d_add_sparse():
     den_a = np.array([0, -2, -3, 0])
     den_b = np.array([0, 1, 2, 3])
-    exp = den_a + den_b
-    res = coo_array(den_a) + coo_array(den_b)
-    assert np.array_equal(res.toarray(), exp)
+    # Currently this routes through CSR format, so 1d sparse addition
+    # isn't supported.
+    with pytest.raises(ValueError,
+                       match='Cannot convert a 1d sparse array'):
+        coo_array(den_a) + coo_array(den_b)
 
 
 def test_1d_mul_vector():
