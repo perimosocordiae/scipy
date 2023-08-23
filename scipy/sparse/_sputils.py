@@ -292,7 +292,25 @@ def validateaxis(axis) -> None:
 
 
 def check_shape(args, current_shape=None, allow_ndim=False) -> tuple[int, ...]:
-    """Imitate numpy.matrix handling of shape arguments"""
+    """Imitate numpy.matrix handling of shape arguments
+    
+    Parameters
+    ----------
+    args : array_like
+        Data structures providing information about the shape of the sparse array.
+    current_shape : tuple, optional
+        The current shape of the sparse array or matrix.
+        If None (default), the current shape will be inferred from args.
+    allow_ndim : bool, optional
+        If True, then n-D arrays are accepted.
+        If False (default), then only 1-D and 2-D sparse arrays are accepted
+        and an error is raised otherwise.
+        
+    Returns
+    -------
+    new_shape: tuple
+        The new shape after validation.
+    """
     if len(args) == 0:
         raise TypeError("function missing 1 required positional argument: "
                         "'shape'")

@@ -803,5 +803,7 @@ class coo_matrix(spmatrix, _coo_base):
 
     def __setstate__(self, state):
         if 'indices' not in state:
+            # For retro-compatibility with the previous attributes
+            # storing nnz coordinates for 2D COO matrix.
             state['indices'] = (state.pop('row'), state.pop('col'))
         self.__dict__.update(state)

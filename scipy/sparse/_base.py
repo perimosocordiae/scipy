@@ -519,6 +519,9 @@ class _spbase:
         # This method has to be different from `__matmul__` because it is also
         # called by sparse matrix classes.
 
+        # Currently matrix multiplication is only supported
+        # for 2D arrays. Hence we unpacked and use only the
+        # two last axes' lengths.
         N = self.shape[-1]
         M = self.shape[-2] if self.ndim > 1 else 1
 

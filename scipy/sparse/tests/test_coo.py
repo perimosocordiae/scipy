@@ -54,7 +54,11 @@ def test_dense_constructor_with_inconsistent_shape():
 
     with pytest.raises(ValueError, match='inconsistent shapes'):
         coo_array([[1, 2, 3]], shape=(3,))
+    with pytest.raises(ValueError, match='axis 0 index 2 exceeds matrix dimension 2'):
+        coo_array(([1], ([2],)), shape=(2,))
 
+    with pytest.raises(ValueError, match='negative axis 0 index: -1'):
+        coo_array(([1], ([-1],)))
 
 def test_1d_sparse_constructor():
     empty1d = coo_array((3,))
@@ -74,6 +78,16 @@ def test_1d_tuple_constructor_with_shape():
     assert res.shape == (4,)
     assert np.array_equal(res.toarray(), np.array([0, 9, 8, 0]))
 
+def test_non_subscriptability():
+    coo_2d = coo_array((2, 2))
+    
+    with pytest.raises(TypeError,
+                        match="'coo_array' object does not support item assignment"):
+        coo_2d[0, 0] = 1
+
+    with pytest.raises(TypeError,
+                       match="'coo_array' object is not subscriptable"):
+        coo_2d[0, :]
 
 def test_reshape():
     arr1d = coo_array([1, 0, 3])
