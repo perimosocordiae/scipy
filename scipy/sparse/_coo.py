@@ -732,13 +732,18 @@ class coo_matrix(spmatrix, _coo_base):
     ndim : int
         Number of dimensions (this is always 2)
     nnz
-        Number of stored values, including explicit zeros
+    size
     data
         COO format data array of the matrix
     row
         COO format row index array of the matrix
     col
         COO format column index array of the matrix
+    has_canonical_format : bool
+        Whether the matrix has sorted indices and no duplicates
+    format
+    T
+
 
     Notes
     -----
