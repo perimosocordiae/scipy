@@ -2035,6 +2035,11 @@ class _TestCommon:
                 assert_equal(datsp.shape, sploaded.shape)
                 assert_array_equal(datsp.toarray(), sploaded.toarray())
                 assert_equal(datsp.format, sploaded.format)
+                # Hacky check for class member equality. This assumes that
+                # all instance variables are one of:
+                #  1. Plain numpy ndarrays
+                #  2. Tuples of ndarrays
+                #  3. Types that support equality comparison with ==
                 for key, val in datsp.__dict__.items():
                     if isinstance(val, np.ndarray):
                         assert_array_equal(val, sploaded.__dict__[key])

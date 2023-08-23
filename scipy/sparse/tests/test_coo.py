@@ -54,11 +54,14 @@ def test_dense_constructor_with_inconsistent_shape():
 
     with pytest.raises(ValueError, match='inconsistent shapes'):
         coo_array([[1, 2, 3]], shape=(3,))
-    with pytest.raises(ValueError, match='axis 0 index 2 exceeds matrix dimension 2'):
+
+    with pytest.raises(ValueError,
+                       match='axis 0 index 2 exceeds matrix dimension 2'):
         coo_array(([1], ([2],)), shape=(2,))
 
     with pytest.raises(ValueError, match='negative axis 0 index: -1'):
         coo_array(([1], ([-1],)))
+
 
 def test_1d_sparse_constructor():
     empty1d = coo_array((3,))
@@ -236,6 +239,14 @@ def test_1d_add_dense():
     res = coo_array(den_a) + den_b
     assert type(res) == type(exp)
     assert np.array_equal(res, exp)
+
+
+def test_1d_add_sparse():
+    den_a = np.array([0, -2, -3, 0])
+    den_b = np.array([0, 1, 2, 3])
+    exp = den_a + den_b
+    res = coo_array(den_a) + coo_array(den_b)
+    assert np.array_equal(res.toarray(), exp)
 
 
 def test_1d_mul_vector():
