@@ -303,10 +303,10 @@ class _coo_base(_data_matrix, _minmax_mixin):
                 raise ValueError("axes don't match matrix dimensions")
             if len(set(axes)) != self.ndim:
                 raise ValueError("repeated axis in transpose")
-        else:
-            raise ValueError("Sparse matrices do not support an 'axes' "
-                             "parameter because swapping dimensions is the "
-                             "only logical permutation.")
+        elif axes != (1, 0):
+            raise ValueError("Sparse matrices do not support "
+                              "an 'axes' parameter because swapping "
+                              "dimensions is the only logical permutation.")
 
         permuted_shape = tuple(self._shape[i] for i in axes)
         permuted_indices = tuple(self.indices[i] for i in axes)
