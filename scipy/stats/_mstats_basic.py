@@ -407,11 +407,11 @@ def pearsonr(x, y):
 
     Warns
     -----
-    PearsonRConstantInputWarning
+    `~scipy.stats.ConstantInputWarning`
         Raised if an input is a constant array.  The correlation coefficient
         is not defined in this case, so ``np.nan`` is returned.
 
-    PearsonRNearConstantInputWarning
+    `~scipy.stats.NearConstantInputWarning`
         Raised if an input is "nearly" constant.  The array ``x`` is considered
         nearly constant if ``norm(x - mean(x)) < 1e-13 * abs(mean(x))``.
         Numerical errors in the calculation ``x - mean(x)`` in this case might
@@ -1604,7 +1604,7 @@ def kruskal(*args):
     >>> b = [6.9, 7.0, 6.1, 7.9]
     >>> c = [7.2, 6.9, 6.1, 6.5]
 
-    Test the hypotesis that the distribution functions for all of the brands'
+    Test the hypothesis that the distribution functions for all of the brands'
     durations are identical. Use 5% level of significance.
 
     >>> kruskal(a, b, c)

@@ -1932,7 +1932,7 @@ class exponnorm_gen(rv_continuous):
     %(after_notes)s
 
     An alternative parameterization of this distribution (for example, in
-    the Wikpedia article [1]_) involves three parameters, :math:`\mu`,
+    the Wikipedia article [1]_) involves three parameters, :math:`\mu`,
     :math:`\lambda` and :math:`\sigma`.
 
     In the present parameterization this corresponds to having ``loc`` and
@@ -4780,10 +4780,10 @@ class invgauss_gen(rv_continuous):
                                                                    args, kwds)
         '''
         Source: Statistical Distributions, 3rd Edition. Evans, Hastings,
-        and Peacock (2000), Page 121. Their shape parameter is equivilent to
+        and Peacock (2000), Page 121. Their shape parameter is equivalent to
         SciPy's with the conversion `fshape_s = fshape / scale`.
 
-        MLE formulas are not used in 3 condtions:
+        MLE formulas are not used in 3 conditions:
         - `loc` is not fixed
         - `mu` is fixed
         These cases fall back on the superclass fit method.
@@ -4832,7 +4832,7 @@ class geninvgauss_gen(rv_continuous):
 
         f(x, p, b) = x^{p-1} \exp(-b (x + 1/x) / 2) / (2 K_p(b))
 
-    where `x > 0`, `p` is a real number and `b > 0`([1]_).
+    where `x > 0`, `p` is a real number and `b > 0`\([1]_).
     :math:`K_p` is the modified Bessel function of second kind of order `p`
     (`scipy.special.kv`).
 
@@ -4923,7 +4923,7 @@ class geninvgauss_gen(rv_continuous):
             # `shp` is the shape of the blocks of random variates that are
             # generated for each combination of parameters associated with
             # broadcasting p and b.
-            # bc is a tuple the same lenth as size.  The values
+            # bc is a tuple the same length as size.  The values
             # in bc are bools.  If bc[j] is True, it means that
             # entire axis is filled in for a given combination of the
             # broadcast arguments.
@@ -5425,9 +5425,11 @@ class jf_skew_t_gen(rv_continuous):
 
     def _munp(self, n, a, b):
         """Returns the n-th moment(s) where all the following hold:
-            - n >= 0
-            - a > n / 2
-            - b > n / 2
+
+        - n >= 0
+        - a > n / 2
+        - b > n / 2
+
         The result is np.nan in all other cases.
         """
         def nth_moment(n_k, a_k, b_k):
@@ -9115,6 +9117,12 @@ class skewnorm_gen(rv_continuous):
             f2=lambda x, a: 2.*_norm_pdf(x)*_norm_cdf(a*x)
         )
 
+    def _logpdf(self, x, a):
+        return _lazywhere(
+            a == 0, (x, a), lambda x, a: _norm_logpdf(x),
+            f2=lambda x, a: np.log(2)+_norm_logpdf(x)+_norm_logcdf(a*x),
+        )
+
     def _cdf(self, x, a):
         a = np.atleast_1d(a)
         cdf = _boost._skewnorm_cdf(x, 0, 1, a)
@@ -9889,37 +9897,36 @@ class truncpareto_gen(rv_continuous):
         return self.a, c
 
     def _pdf(self, x, b, c):
-        return b * x**-(b+1) / (1 - c**-b)
+        return b * x**-(b+1) / (1 - 1/c**b)
 
     def _logpdf(self, x, b, c):
-        # return np.log(b) - np.log1p(-c**-b) - (b+1)*np.log(x)
         return np.log(b) - np.log(-np.expm1(-b*np.log(c))) - (b+1)*np.log(x)
 
     def _cdf(self, x, b, c):
-        return (1 - x**-b) / (1 - c**-b)
+        return (1 - x**-b) / (1 - 1/c**b)
 
     def _logcdf(self, x, b, c):
-        return np.log1p(-x**-b) - np.log1p(-c**-b)
+        return np.log1p(-x**-b) - np.log1p(-1/c**b)
 
     def _ppf(self, q, b, c):
-        return pow(1 - (1 - c**-b)*q, -1/b)
+        return pow(1 - (1 - 1/c**b)*q, -1/b)
 
     def _sf(self, x, b, c):
-        return (x**-b - c**-b) / (1 - c**-b)
+        return (x**-b - 1/c**b) / (1 - 1/c**b)
 
     def _logsf(self, x, b, c):
-        return np.log(x**-b - c**-b) - np.log1p(-c**-b)
+        return np.log(x**-b - 1/c**b) - np.log1p(-1/c**b)
 
     def _isf(self, q, b, c):
-        return pow(c**-b + (1 - c**-b)*q, -1/b)
+        return pow(1/c**b + (1 - 1/c**b)*q, -1/b)
 
     def _entropy(self, b, c):
-        return -(np.log(b/(1 - c**-b))
+        return -(np.log(b/(1 - 1/c**b))
                  + (b+1)*(np.log(c)/(c**b - 1) - 1/b))
 
     def _munp(self, n, b, c):
         if (n == b).all():
-            return b*np.log(c) / (1 - c**-b)
+            return b*np.log(c) / (1 - 1/c**b)
         else:
             return b / (b-n) * (c**b - c**n) / (c**b - 1)
 
@@ -10087,7 +10094,7 @@ class truncpareto_gen(rv_continuous):
 
             # Standardised values should be within the distribution support
             # when all parameters controlling it are fixed. If it not the case,
-            # `fc` is overidden by `c` determined from `floc` and `fscale` when
+            # `fc` is overridden by `c` determined from `floc` and `fscale` when
             # raising the exception.
             if fc and (floc is not None) and fscale:
                 if data.max() > fc*fscale + floc:
@@ -11200,7 +11207,7 @@ class argus_gen(rv_continuous):
         # only samples on [0, chi**2 / 2], and apply the inverse
         # transformation X = (1 - 2*Y/chi**2)**(1/2). Since we only
         # look at chi > 1.8, gamma(1.5).cdf(chi**2/2) is large enough such
-        # Y falls in the inteval [0, chi**2 / 2] with a high probability:
+        # Y falls in the interval [0, chi**2 / 2] with a high probability:
         # stats.gamma(1.5).cdf(1.8**2/2) = 0.644...
         #
         # The points to switch between the different methods are determined

@@ -4,7 +4,6 @@
 import math
 import numpy as np
 from numpy import asarray_chkfinite, asarray
-from numpy.lib import NumpyVersion
 import scipy.linalg
 from scipy._lib import doccer
 from scipy.special import (gammaln, psi, multigammaln, xlogy, entr, betaln,
@@ -2397,8 +2396,8 @@ class wishart_gen(multi_rv_generic):
         Returns
         -------
         rvs : ndarray
-            Random variates of shape (`size`) + (`dim`, `dim), where `dim` is
-            the dimension of the scale matrix.
+            Random variates of shape (`size`) + (``dim``, ``dim``), where
+            ``dim`` is the dimension of the scale matrix.
 
         Notes
         -----
@@ -3017,8 +3016,8 @@ class invwishart_gen(wishart_gen):
         Returns
         -------
         rvs : ndarray
-            Random variates of shape (`size`) + (`dim`, `dim), where `dim` is
-            the dimension of the scale matrix.
+            Random variates of shape (`size`) + (``dim``, ``dim``), where
+            ``dim`` is the dimension of the scale matrix.
 
         Notes
         -----
@@ -3297,7 +3296,7 @@ class multinomial_gen(multi_rv_generic):
         pcond = np.any(p < 0, axis=-1)
         pcond |= np.any(p > 1, axis=-1)
 
-        n = np.array(n, dtype=np.int_, copy=True)
+        n = np.array(n, dtype=int, copy=True)
 
         # true for bad n
         ncond = n < 0
@@ -3310,7 +3309,7 @@ class multinomial_gen(multi_rv_generic):
         x_ is an int array; xcond is a boolean array flagging values out of the
         domain.
         """
-        xx = np.asarray(x, dtype=np.int_)
+        xx = np.asarray(x, dtype=int)
 
         if xx.ndim == 0:
             raise ValueError("x must be an array.")
@@ -3854,9 +3853,6 @@ class ortho_group_gen(multi_rv_generic):
         random_state = self._get_random_state(random_state)
 
         size = int(size)
-        if size > 1 and NumpyVersion(np.__version__) < '1.22.0':
-            return np.array([self.rvs(dim, size=1, random_state=random_state)
-                             for i in range(size)])
 
         dim = self._process_parameters(dim)
 
@@ -4269,9 +4265,6 @@ class unitary_group_gen(multi_rv_generic):
         random_state = self._get_random_state(random_state)
 
         size = int(size)
-        if size > 1 and NumpyVersion(np.__version__) < '1.22.0':
-            return np.array([self.rvs(dim, size=1, random_state=random_state)
-                             for i in range(size)])
 
         dim = self._process_parameters(dim)
 
@@ -6380,7 +6373,7 @@ class vonmises_fisher_gen(multi_rv_generic):
     direction :math:`\mathbf{\mu}`.
 
     In dimensions 2 and 3, specialized algorithms are used for fast sampling
-    [2]_, [3]_. For dimenions of 4 or higher the rejection sampling algorithm
+    [2]_, [3]_. For dimensions of 4 or higher the rejection sampling algorithm
     described in [4]_ is utilized. This implementation is partially based on
     the geomstats package [5]_, [6]_.
 

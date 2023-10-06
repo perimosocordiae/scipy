@@ -35,7 +35,6 @@ from scipy.special import binom
 from scipy import optimize
 from .common_tests import check_named_results
 from scipy.spatial.distance import cdist
-from numpy.lib import NumpyVersion
 from scipy.stats._axis_nan_policy import _broadcast_concatenate
 from scipy.stats._stats_py import _permutation_distribution_t
 from scipy._lib._util import AxisError
@@ -2052,7 +2051,7 @@ class TestRegression:
         with np.errstate(invalid="ignore"):
             result = stats.linregress(x, x)
 
-        # Make sure the resut still comes back as `LinregressResult`
+        # Make sure the result still comes back as `LinregressResult`
         lr = stats._stats_mstats_common.LinregressResult
         assert_(isinstance(result, lr))
         assert_array_equal(result, (np.nan,)*5)
@@ -2342,9 +2341,8 @@ class TestMode:
         # mode should treat np.nan as it would any other object when
         # nan_policy='propagate'
         a = [2, np.nan, 1, np.nan]
-        if NumpyVersion(np.__version__) >= '1.21.0':
-            res = stats.mode(a)
-            assert np.isnan(res.mode) and res.count == 2
+        res = stats.mode(a)
+        assert np.isnan(res.mode) and res.count == 2
 
     def test_keepdims(self):
         # test empty arrays (handled by `np.mean`)
@@ -2439,10 +2437,9 @@ class TestMode:
         ref = ([20, np.nan], [2, 0])
         assert_equal(res, ref)
 
-        if NumpyVersion(np.__version__) >= '1.21.0':
-            res = stats.mode(a, axis=1, nan_policy='propagate')
-            ref = ([20, np.nan], [2, 3])
-            assert_equal(res, ref)
+        res = stats.mode(a, axis=1, nan_policy='propagate')
+        ref = ([20, np.nan], [2, 3])
+        assert_equal(res, ref)
 
         z = np.array([[], []])
         res = stats.mode(z, axis=1)
@@ -2955,12 +2952,11 @@ class TestIQR:
         assert_equal(stats.iqr(y, interpolation='midpoint'), 2)
 
         # Check all method= values new in numpy 1.22.0 are accepted
-        if NumpyVersion(np.__version__) >= '1.22.0':
-            for method in ('inverted_cdf', 'averaged_inverted_cdf',
-                           'closest_observation', 'interpolated_inverted_cdf',
-                           'hazen', 'weibull', 'median_unbiased',
-                           'normal_unbiased'):
-                stats.iqr(y, interpolation=method)
+        for method in ('inverted_cdf', 'averaged_inverted_cdf',
+                       'closest_observation', 'interpolated_inverted_cdf',
+                       'hazen', 'weibull', 'median_unbiased',
+                       'normal_unbiased'):
+            stats.iqr(y, interpolation=method)
 
         assert_raises(ValueError, stats.iqr, x, interpolation='foobar')
 
@@ -5764,8 +5760,8 @@ def test_normalitytests():
     assert_raises(ValueError, stats.normaltest, x, nan_policy='raise')
     assert_raises(ValueError, stats.normaltest, x, nan_policy='foobar')
 
-    # regression test for issue gh-9033: x cleary non-normal but power of
-    # negtative denom needs to be handled correctly to reject normality
+    # regression test for issue gh-9033: x clearly non-normal but power of
+    # negative denom needs to be handled correctly to reject normality
     counts = [128, 0, 58, 7, 0, 41, 16, 0, 0, 167]
     x = np.hstack([np.full(c, i) for i, c in enumerate(counts)])
     assert_equal(stats.kurtosistest(x)[1] < 0.01, True)
@@ -8512,7 +8508,7 @@ class TestExpectile:
         # For alpha = 0.5, i.e. the mean, strict equality holds.
         # For alpha < 0.5, one can use property 6. to show
         # T(X + Y) >= T(X) + T(Y)
-        y = rng.logistic(size=n, loc=10)  # different distibution than x
+        y = rng.logistic(size=n, loc=10)  # different distribution than x
         if alpha == 0.5:
             def assert_op(a, b):
                 assert_allclose(a, b)

@@ -413,7 +413,7 @@ def peak_prominences(x, peaks, wlen=None):
     >>> from scipy.signal import find_peaks, peak_prominences
     >>> import matplotlib.pyplot as plt
 
-    Create a test signal with two overlayed harmonics
+    Create a test signal with two overlaid harmonics
 
     >>> x = np.linspace(0, 6 * np.pi, 1000)
     >>> x = np.sin(x) + 0.6 * np.sin(2.6 * x)
@@ -558,7 +558,7 @@ def peak_widths(x, peaks, rel_height=0.5, prominence_data=None, wlen=None):
     >>> from scipy.signal import chirp, find_peaks, peak_widths
     >>> import matplotlib.pyplot as plt
 
-    Create a test signal with two overlayed harmonics
+    Create a test signal with two overlaid harmonics
 
     >>> x = np.linspace(0, 6 * np.pi, 1000)
     >>> x = np.sin(x) + 0.6 * np.sin(2.6 * x)
@@ -712,7 +712,7 @@ def _select_by_peak_threshold(x, peaks, tmin, tmax):
     .. versionadded:: 1.1.0
     """
     # Stack thresholds on both sides to make min / max operations easier:
-    # tmin is compared with the smaller, and tmax with the greater thresold to
+    # tmin is compared with the smaller, and tmax with the greater threshold to
     # each peak's side
     stacked_thresholds = np.vstack([x[peaks] - x[peaks - 1],
                                     x[peaks] - x[peaks + 1]])
@@ -1157,7 +1157,7 @@ def _filter_ridge_lines(cwt, ridge_lines, window_size=None, min_length=None,
     min_snr : float, optional
         Minimum SNR ratio. Default 1. The signal is the value of
         the cwt matrix at the shortest length scale (``cwt[0, loc]``), the
-        noise is the `noise_perc`th percentile of datapoints contained within a
+        noise is the `noise_perc`\\ th percentile of datapoints contained within a
         window of `window_size` around ``cwt[0, loc]``.
     noise_perc : float, optional
         When calculating the noise floor, percentile of data points
