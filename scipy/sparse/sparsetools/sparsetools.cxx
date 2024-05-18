@@ -56,7 +56,6 @@ static void *allocate_std_vector_typenum(int typenum);
 static void free_std_vector_typenum(int typenum, void *p);
 static PyObject *c_array_from_object(PyObject *obj, int typenum, int is_output);
 
-
 /*
  * Call a thunk function, dealing with input and output arrays.
  *

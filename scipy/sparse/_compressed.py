@@ -1384,7 +1384,8 @@ class _cs_matrix(_data_matrix, _minmax_mixin, IndexMixin):
             data = np.empty(maxnnz, dtype=upcast(self.dtype, other.dtype))
 
         M, N = self._shape_as_2d
-        fn(M, N,
+        canon = self.has_canonical_format and other.has_canonical_format
+        fn(canon, M, N,
            np.asarray(self.indptr, dtype=idx_dtype),
            np.asarray(self.indices, dtype=idx_dtype),
            self.data,

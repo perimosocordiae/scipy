@@ -576,17 +576,20 @@ void bsr_binop_bsr(const I n_brow, const I n_bcol,
 {
     assert( R > 0 && C > 0);
 
+    bool canon = csr_has_canonical_format(n_brow, Ap, Aj) &&
+                 csr_has_canonical_format(n_brow, Bp, Bj);
     if( R == 1 && C == 1 ){
         //use CSR for 1x1 blocksize
-        csr_binop_csr(n_brow, n_bcol, Ap, Aj, Ax, Bp, Bj, Bx, Cp, Cj, Cx, op);
-    }
-    else if ( csr_has_canonical_format(n_brow, Ap, Aj) && csr_has_canonical_format(n_brow, Bp, Bj) ){
-        // prefer faster implementation
-        bsr_binop_bsr_canonical(n_brow, n_bcol, R, C, Ap, Aj, Ax, Bp, Bj, Bx, Cp, Cj, Cx, op);
-    }
-    else {
-        // slower fallback method
-        bsr_binop_bsr_general(n_brow, n_bcol, R, C, Ap, Aj, Ax, Bp, Bj, Bx, Cp, Cj, Cx, op);
+        csr_binop_csr(canon, n_brow, n_bcol, Ap, Aj, Ax, Bp, Bj, Bx, Cp, Cj, Cx,
+                      op);
+    } else if (canon) {
+      // prefer faster implementation
+      bsr_binop_bsr_canonical(n_brow, n_bcol, R, C, Ap, Aj, Ax, Bp, Bj, Bx, Cp,
+                              Cj, Cx, op);
+    } else {
+      // slower fallback method
+      bsr_binop_bsr_general(n_brow, n_bcol, R, C, Ap, Aj, Ax, Bp, Bj, Bx, Cp,
+                            Cj, Cx, op);
     }
 }
 

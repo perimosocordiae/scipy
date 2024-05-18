@@ -887,126 +887,104 @@ void csr_binop_csr_canonical(const I n_row, const I n_col,
  *
  */
 template <class I, class T, class T2, class binary_op>
-void csr_binop_csr(const I n_row,
-                   const I n_col,
-                   const I Ap[],
-                   const I Aj[],
-                   const T Ax[],
-                   const I Bp[],
-                   const I Bj[],
-                   const T Bx[],
-                         I Cp[],
-                         I Cj[],
-                         T2 Cx[],
-                   const binary_op& op)
-{
-    if (csr_has_canonical_format(n_row,Ap,Aj) && csr_has_canonical_format(n_row,Bp,Bj))
-        csr_binop_csr_canonical(n_row, n_col, Ap, Aj, Ax, Bp, Bj, Bx, Cp, Cj, Cx, op);
-    else
-        csr_binop_csr_general(n_row, n_col, Ap, Aj, Ax, Bp, Bj, Bx, Cp, Cj, Cx, op);
+void csr_binop_csr(const bool canon, const I n_row, const I n_col, const I Ap[],
+                   const I Aj[], const T Ax[], const I Bp[], const I Bj[],
+                   const T Bx[], I Cp[], I Cj[], T2 Cx[], const binary_op& op) {
+  if (canon)
+    csr_binop_csr_canonical(n_row, n_col, Ap, Aj, Ax, Bp, Bj, Bx, Cp, Cj, Cx,
+                            op);
+  else
+    csr_binop_csr_general(n_row, n_col, Ap, Aj, Ax, Bp, Bj, Bx, Cp, Cj, Cx, op);
 }
 
 /* element-wise binary operations*/
-template <class I, class T, class T2>
-void csr_ne_csr(const I n_row, const I n_col,
-                const I Ap[], const I Aj[], const T Ax[],
-                const I Bp[], const I Bj[], const T Bx[],
-                      I Cp[],       I Cj[],      T2 Cx[])
-{
-    csr_binop_csr(n_row,n_col,Ap,Aj,Ax,Bp,Bj,Bx,Cp,Cj,Cx,std::not_equal_to<T>());
-}
-
-template <class I, class T, class T2>
-void csr_lt_csr(const I n_row, const I n_col,
-                const I Ap[], const I Aj[], const T Ax[],
-                const I Bp[], const I Bj[], const T Bx[],
-                      I Cp[],       I Cj[],      T2 Cx[])
-{
-    csr_binop_csr(n_row,n_col,Ap,Aj,Ax,Bp,Bj,Bx,Cp,Cj,Cx,std::less<T>());
-}
-
-template <class I, class T, class T2>
-void csr_gt_csr(const I n_row, const I n_col,
-                const I Ap[], const I Aj[], const T Ax[],
-                const I Bp[], const I Bj[], const T Bx[],
-                      I Cp[],       I Cj[],      T2 Cx[])
-{
-    csr_binop_csr(n_row,n_col,Ap,Aj,Ax,Bp,Bj,Bx,Cp,Cj,Cx,std::greater<T>());
-}
-
-template <class I, class T, class T2>
-void csr_le_csr(const I n_row, const I n_col,
-                const I Ap[], const I Aj[], const T Ax[],
-                const I Bp[], const I Bj[], const T Bx[],
-                      I Cp[],       I Cj[],      T2 Cx[])
-{
-    csr_binop_csr(n_row,n_col,Ap,Aj,Ax,Bp,Bj,Bx,Cp,Cj,Cx,std::less_equal<T>());
-}
-
-template <class I, class T, class T2>
-void csr_ge_csr(const I n_row, const I n_col,
-                const I Ap[], const I Aj[], const T Ax[],
-                const I Bp[], const I Bj[], const T Bx[],
-                      I Cp[],       I Cj[],      T2 Cx[])
-{
-    csr_binop_csr(n_row,n_col,Ap,Aj,Ax,Bp,Bj,Bx,Cp,Cj,Cx,std::greater_equal<T>());
+template <class I, class T>
+void csr_ne_csr(const bool canon, const I n_row, const I n_col, const I Ap[],
+                const I Aj[], const T Ax[], const I Bp[], const I Bj[],
+                const T Bx[], I Cp[], I Cj[], npy_bool_wrapper Cx[]) {
+  csr_binop_csr(canon, n_row, n_col, Ap, Aj, Ax, Bp, Bj, Bx, Cp, Cj, Cx,
+                std::not_equal_to<T>());
 }
 
 template <class I, class T>
-void csr_elmul_csr(const I n_row, const I n_col,
-                   const I Ap[], const I Aj[], const T Ax[],
-                   const I Bp[], const I Bj[], const T Bx[],
-                         I Cp[],       I Cj[],       T Cx[])
-{
-    csr_binop_csr(n_row,n_col,Ap,Aj,Ax,Bp,Bj,Bx,Cp,Cj,Cx,std::multiplies<T>());
+void csr_lt_csr(const bool canon, const I n_row, const I n_col, const I Ap[],
+                const I Aj[], const T Ax[], const I Bp[], const I Bj[],
+                const T Bx[], I Cp[], I Cj[], npy_bool_wrapper Cx[]) {
+  csr_binop_csr(canon, n_row, n_col, Ap, Aj, Ax, Bp, Bj, Bx, Cp, Cj, Cx,
+                std::less<T>());
 }
 
 template <class I, class T>
-void csr_eldiv_csr(const I n_row, const I n_col,
-                   const I Ap[], const I Aj[], const T Ax[],
-                   const I Bp[], const I Bj[], const T Bx[],
-                         I Cp[],       I Cj[],       T Cx[])
-{
-    csr_binop_csr(n_row,n_col,Ap,Aj,Ax,Bp,Bj,Bx,Cp,Cj,Cx,safe_divides<T>());
-}
-
-
-template <class I, class T>
-void csr_plus_csr(const I n_row, const I n_col,
-                  const I Ap[], const I Aj[], const T Ax[],
-                  const I Bp[], const I Bj[], const T Bx[],
-                        I Cp[],       I Cj[],       T Cx[])
-{
-    csr_binop_csr(n_row,n_col,Ap,Aj,Ax,Bp,Bj,Bx,Cp,Cj,Cx,std::plus<T>());
+void csr_gt_csr(const bool canon, const I n_row, const I n_col, const I Ap[],
+                const I Aj[], const T Ax[], const I Bp[], const I Bj[],
+                const T Bx[], I Cp[], I Cj[], npy_bool_wrapper Cx[]) {
+  csr_binop_csr(canon, n_row, n_col, Ap, Aj, Ax, Bp, Bj, Bx, Cp, Cj, Cx,
+                std::greater<T>());
 }
 
 template <class I, class T>
-void csr_minus_csr(const I n_row, const I n_col,
-                   const I Ap[], const I Aj[], const T Ax[],
-                   const I Bp[], const I Bj[], const T Bx[],
-                         I Cp[],       I Cj[],       T Cx[])
-{
-    csr_binop_csr(n_row,n_col,Ap,Aj,Ax,Bp,Bj,Bx,Cp,Cj,Cx,std::minus<T>());
+void csr_le_csr(const bool canon, const I n_row, const I n_col, const I Ap[],
+                const I Aj[], const T Ax[], const I Bp[], const I Bj[],
+                const T Bx[], I Cp[], I Cj[], npy_bool_wrapper Cx[]) {
+  csr_binop_csr(canon, n_row, n_col, Ap, Aj, Ax, Bp, Bj, Bx, Cp, Cj, Cx,
+                std::less_equal<T>());
 }
 
 template <class I, class T>
-void csr_maximum_csr(const I n_row, const I n_col,
-                     const I Ap[], const I Aj[], const T Ax[],
-                     const I Bp[], const I Bj[], const T Bx[],
-                           I Cp[],       I Cj[],       T Cx[])
-{
-    csr_binop_csr(n_row,n_col,Ap,Aj,Ax,Bp,Bj,Bx,Cp,Cj,Cx,maximum<T>());
+void csr_ge_csr(const bool canon, const I n_row, const I n_col, const I Ap[],
+                const I Aj[], const T Ax[], const I Bp[], const I Bj[],
+                const T Bx[], I Cp[], I Cj[], npy_bool_wrapper Cx[]) {
+  csr_binop_csr(canon, n_row, n_col, Ap, Aj, Ax, Bp, Bj, Bx, Cp, Cj, Cx,
+                std::greater_equal<T>());
 }
 
 template <class I, class T>
-void csr_minimum_csr(const I n_row, const I n_col,
-                     const I Ap[], const I Aj[], const T Ax[],
-                     const I Bp[], const I Bj[], const T Bx[],
-                           I Cp[],       I Cj[],       T Cx[])
-{
-    csr_binop_csr(n_row,n_col,Ap,Aj,Ax,Bp,Bj,Bx,Cp,Cj,Cx,minimum<T>());
+void csr_elmul_csr(const bool canon, const I n_row, const I n_col, const I Ap[],
+                   const I Aj[], const T Ax[], const I Bp[], const I Bj[],
+                   const T Bx[], I Cp[], I Cj[], T Cx[]) {
+  csr_binop_csr(canon, n_row, n_col, Ap, Aj, Ax, Bp, Bj, Bx, Cp, Cj, Cx,
+                std::multiplies<T>());
 }
 
+template <class I, class T>
+void csr_eldiv_csr(const bool canon, const I n_row, const I n_col, const I Ap[],
+                   const I Aj[], const T Ax[], const I Bp[], const I Bj[],
+                   const T Bx[], I Cp[], I Cj[], T Cx[]) {
+  csr_binop_csr(canon, n_row, n_col, Ap, Aj, Ax, Bp, Bj, Bx, Cp, Cj, Cx,
+                safe_divides<T>());
+}
+
+template <class I, class T>
+void csr_plus_csr(const bool canon, const I n_row, const I n_col, const I Ap[],
+                  const I Aj[], const T Ax[], const I Bp[], const I Bj[],
+                  const T Bx[], I Cp[], I Cj[], T Cx[]) {
+  csr_binop_csr(canon, n_row, n_col, Ap, Aj, Ax, Bp, Bj, Bx, Cp, Cj, Cx,
+                std::plus<T>());
+}
+
+template <class I, class T>
+void csr_minus_csr(const bool canon, const I n_row, const I n_col, const I Ap[],
+                   const I Aj[], const T Ax[], const I Bp[], const I Bj[],
+                   const T Bx[], I Cp[], I Cj[], T Cx[]) {
+  csr_binop_csr(canon, n_row, n_col, Ap, Aj, Ax, Bp, Bj, Bx, Cp, Cj, Cx,
+                std::minus<T>());
+}
+
+template <class I, class T>
+void csr_maximum_csr(const bool canon, const I n_row, const I n_col,
+                     const I Ap[], const I Aj[], const T Ax[], const I Bp[],
+                     const I Bj[], const T Bx[], I Cp[], I Cj[], T Cx[]) {
+  csr_binop_csr(canon, n_row, n_col, Ap, Aj, Ax, Bp, Bj, Bx, Cp, Cj, Cx,
+                maximum<T>());
+}
+
+template <class I, class T>
+void csr_minimum_csr(const bool canon, const I n_row, const I n_col,
+                     const I Ap[], const I Aj[], const T Ax[], const I Bp[],
+                     const I Bj[], const T Bx[], I Cp[], I Cj[], T Cx[]) {
+  csr_binop_csr(canon, n_row, n_col, Ap, Aj, Ax, Bp, Bj, Bx, Cp, Cj, Cx,
+                minimum<T>());
+}
 
 /*
  * Sum together duplicate column entries in each row of CSR matrix A
@@ -1700,6 +1678,7 @@ inline int test_throw_error() {
     return 1;
 }
 
+#if 0
 #define SPTOOLS_CSR_EXTERN_TEMPLATE(I, T) \
   extern template void csr_diagonal(const I k, const I n_row, const I n_col, const I Ap[], const I Aj[], const T Ax[], T Yx[]); \
   extern template void csr_scale_rows(const I n_row, const I n_col, const I Ap[], const I Aj[], T Ax[], const T Xx[]); \
@@ -1732,5 +1711,6 @@ inline int test_throw_error() {
 
 SPTOOLS_FOR_EACH_INDEX_DATA_TYPE_COMBINATION(SPTOOLS_CSR_EXTERN_TEMPLATE)
 #undef SPTOOLS_CSR_EXTERN_TEMPLATE
+#endif
 
 #endif

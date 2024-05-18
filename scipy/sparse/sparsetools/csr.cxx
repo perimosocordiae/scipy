@@ -8,6 +8,7 @@ extern "C" {
 #include "csr_impl.h"
 }
 
+#if 0
 #define SPTOOLS_CSR_DEFINE_TEMPLATE(I, T) \
   template void csr_diagonal(const I k, const I n_row, const I n_col, const I Ap[], const I Aj[], const T Ax[], T Yx[]); \
   template void csr_scale_rows(const I n_row, const I n_col, const I Ap[], const I Aj[], T Ax[], const T Xx[]); \
@@ -39,3 +40,4 @@ extern "C" {
   template void csr_sample_values(const I n_row, const I n_col, const I Ap[], const I Aj[], const T Ax[], const I n_samples, const I Bi[], const I Bj[], T Bx[]);
 
 SPTOOLS_FOR_EACH_INDEX_DATA_TYPE_COMBINATION(SPTOOLS_CSR_DEFINE_TEMPLATE)
+#endif
