@@ -220,6 +220,12 @@ class _spbase(SparseABC):
         raise NotImplementedError(
             f'{type(self).__name__}.resize is not implemented')
 
+    def drop_zero_axis(self, *, axis: int):
+        """Remove slices along the specified axis with no stored entries."""
+        # As an inplace operation, this requires implementation in each format.
+        raise NotImplementedError(
+            f'{type(self).__name__}.drop_zero_axis is not implemented')
+
     def astype(self, dtype, casting='unsafe', copy=True):
         """Cast the array/matrix elements to a specified type.
 

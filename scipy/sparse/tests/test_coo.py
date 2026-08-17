@@ -1405,3 +1405,24 @@ def test_bool_set():
     A, D = A_orig.copy(), D_orig.copy()
     D[idxnp] = A[idxnp] = -88
     assert_equal(A.toarray(), D)
+
+def test_drop_zero_axis():
+    coords = (np.array([0, 0, 3]), np.array([1, 1, 1]), np.array([2, 5, 2]))
+    data = np.array([4.0, 0.0, 7.0])  # explicit zero included
+    orig = coo_array((data, coords), shape=(5, 4, 6))
+
+    A = orig.copy()
+    A.drop_zero_axis(axis=0)
+    assert_equal(A.shape, (2, 4, 6))
+    assert_equal(A.nnz, 3)
+    assert_equal(A.data, data)
+
+    A = orig.copy()
+    A.drop_zero_axis(axis=2)
+    assert_equal(A.shape, (5, 4, 2))
+    assert_equal(A.nnz, 3)
+    assert_equal(A.data, data)
+
+    with pytest.raises(TypeError):
+        A.drop_zero_axis(0)
+

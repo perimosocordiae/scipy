@@ -295,6 +295,18 @@ class _coo_base(_data_matrix, _minmax_mixin):
 
     resize.__doc__ = _spbase.resize.__doc__
 
+    def drop_zero_axis(self, *, axis: int) -> None:
+        axis = self.ndim + axis if axis < 0 else axis
+        if axis not in range(self.ndim):
+            raise ValueError(f"Invalid {axis=} for {self.ndim}-D sparse array")
+        uniq_vals, new_idx = np.unique(self.coords[axis], return_inverse=True)
+        self.coords[axis][:] = new_idx
+        tmp_shape = list(self.shape)
+        tmp_shape[axis] = uniq_vals.size
+        self._shape = tuple(tmp_shape)
+
+    drop_zero_axis.__doc__ = _spbase.drop_zero_axis.__doc__
+
     def toarray(self, order=None, out=None):
         B = self._process_toarray_args(order, out)
         fortran = int(B.flags.f_contiguous)
